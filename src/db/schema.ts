@@ -37,7 +37,7 @@ const vector = (dimensions: number) =>
     fromDriver(value: string): number[] {
       return JSON.parse(value);
     },
-  })();
+  });
 
 // =====================================================
 // Neon Auth (managed by Neon — referenced, not migrated)
@@ -212,10 +212,23 @@ export const messages = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::citext[]`),
+    ccAddresses: citext("cc_addresses")
+      .array()
+      .notNull()
+      .default(sql`'{}'::citext[]`),
+    bccAddresses: citext("bcc_addresses")
+      .array()
+      .notNull()
+      .default(sql`'{}'::citext[]`),
     subject: text("subject"),
     bodyText: text("body_text"),
     bodyHtml: text("body_html"),
-    embedding: vector(1536)("embedding"),
+    headers: jsonb("headers")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    raw: text("raw"),
+    status: text("status").notNull().default("sent"),
+    embedding: vector(384)("embedding"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -233,6 +246,10 @@ export const messages = pgTable(
     directionCheck: check(
       "messages_direction_check",
       sql`${t.direction} in ('inbound', 'outbound')`,
+    ),
+    statusCheck: check(
+      "messages_status_check",
+      sql`${t.status} in ('queued', 'sent', 'delivered', 'bounced', 'received')`,
     ),
     // HNSW vector index — defined here but Drizzle's index DSL doesn't fully
     // support HNSW operator classes yet. The raw SQL migration handles this:
@@ -255,6 +272,9 @@ export const webhookEndpoints = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     url: text("url").notNull(),
+    description: text("description"),
+    subscribedEvents: text("subscribed_events").array(),
+    signingSecret: text("signing_secret").notNull(),
     isEnabled: boolean("is_enabled").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

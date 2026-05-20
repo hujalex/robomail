@@ -117,7 +117,7 @@ Retrieve a thread with all its messages.
 
 #### **POST /v1/threads/search**
 
-Semantic search across threads (uses pgvector embeddings on messages). Embedding done with OpenAI text-embedding-3-small / ada-002
+Semantic search across threads (uses pgvector embeddings on messages). Embedding done with transformers.js (default: Xenova/all-MiniLM-L6-v2)
 
 * Body: query (string, required), inbox\_email\_address (optional, filters scope), limit (1-50, default 10\)  
 * Returns: { object: "list", data: Array\<Thread & { similarity: number }\> }
@@ -337,7 +337,7 @@ Returns info about the authenticated account. Useful for SDK debugging.
 * subject text  
 * body\_text text  
 * body\_html text  
-* embedding vector(1536) — pgvector for semantic search  
+* embedding vector(384) — pgvector for semantic search  
 * created\_at timestamptz
 
 #### **webhook\_endpoints — where to deliver inbound message events**
@@ -350,4 +350,3 @@ Returns info about the authenticated account. Useful for SDK debugging.
 * description \-   
 * subscribed\_events-   
 * signing\_secret \- 
-
