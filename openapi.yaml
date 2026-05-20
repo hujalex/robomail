@@ -1,0 +1,1091 @@
+openapi: 3.1.0
+info:
+  title: AgentMail API
+  version: 1.0.0
+  description: >
+    API for giving AI agents their own email inboxes — send, receive, and
+    manage threaded conversations programmatically.
+  x-organization: agentmail-demo
+
+servers:
+  - url: https://agentmail-demo.vercel.app
+    description: Production
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key (sk_live_...)
+
+  schemas:
+    Inbox:
+      type: object
+      required: [id, address, metadata, created_at]
+      properties:
+        id:
+          type: string
+          description: Inbox ID (same as address)
+          example: alice@yourdomain.com
+        address:
+          type: string
+          format: email
+          example: alice@yourdomain.com
+        display_name:
+          type: [string, "null"]
+          example: Alice Agent
+        metadata:
+          type: object
+          additionalProperties: true
+          example: {}
+        created_at:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      required: [id, thread_id, inbox_email_address, direction, message_id_header, from, to, cc, bcc, headers, status, created_at]
+      properties:
+        id:
+          type: string
+          description: RFC 5322 Message-ID (normalized, without angle brackets)
+          example: 1234567890.abcdef.12345@yourdomain.com
+        thread_id:
+          type: string
+          example: thread_abc123
+        inbox_email_address:
+          type: string
+          format: email
+          example: alice@yourdomain.com
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        message_id_header:
+          type: string
+        in_reply_to:
+          type: [string, "null"]
+        from:
+          type: string
+          format: email
+        to:
+          type: array
+          items:
+            type: string
+            format: email
+        cc:
+          type: array
+          items:
+            type: string
+            format: email
+        bcc:
+          type: array
+          items:
+            type: string
+            format: email
+        subject:
+          type: [string, "null"]
+        body_text:
+          type: [string, "null"]
+        body_html:
+          type: [string, "null"]
+        headers:
+          type: object
+          additionalProperties: true
+        status:
+          type: string
+          enum: [sent, received, delivered, bounced]
+        created_at:
+          type: string
+          format: date-time
+
+    Thread:
+      type: object
+      required: [id, inbox_email_address, root_message_id_header, created_at, messages]
+      properties:
+        id:
+          type: string
+          example: thread_abc123
+        inbox_email_address:
+          type: string
+          format: email
+          example: alice@yourdomain.com
+        subject:
+          type: [string, "null"]
+        root_message_id_header:
+          type: string
+        last_message_at:
+          type: [string, "null"]
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+
+    ThreadWithSimilarity:
+      allOf:
+        - $ref: "#/components/schemas/Thread"
+        - type: object
+          required: [similarity]
+          properties:
+            similarity:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 1
+
+    WebhookEndpoint:
+      type: object
+      required: [id, url, is_enabled, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        description:
+          type: [string, "null"]
+        subscribed_events:
+          type: [array, "null"]
+          items:
+            type: string
+          example: [message.received, thread.created]
+        is_enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    WebhookEndpointWithSecret:
+      allOf:
+        - $ref: "#/components/schemas/WebhookEndpoint"
+        - type: object
+          required: [signing_secret]
+          properties:
+            signing_secret:
+              type: string
+              description: Shown only on creation and after rotation.
+
+    InboxList:
+      type: object
+      required: [object, data, has_more]
+      properties:
+        object:
+          type: string
+          enum: [list]
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Inbox"
+        has_more:
+          type: boolean
+        next_cursor:
+          type: [string, "null"]
+
+    ThreadList:
+      type: object
+      required: [object, data, has_more]
+      properties:
+        object:
+          type: string
+          enum: [list]
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Thread"
+        has_more:
+          type: boolean
+        next_cursor:
+          type: [string, "null"]
+
+    ThreadSearchList:
+      type: object
+      required: [object, data, has_more]
+      properties:
+        object:
+          type: string
+          enum: [list]
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ThreadWithSimilarity"
+        has_more:
+          type: boolean
+        next_cursor:
+          type: [string, "null"]
+
+    MessageList:
+      type: object
+      required: [object, data, has_more]
+      properties:
+        object:
+          type: string
+          enum: [list]
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        has_more:
+          type: boolean
+        next_cursor:
+          type: [string, "null"]
+
+    WebhookEndpointList:
+      type: object
+      required: [object, data]
+      properties:
+        object:
+          type: string
+          enum: [list]
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WebhookEndpoint"
+
+    DeletedResource:
+      type: object
+      required: [deleted, id]
+      properties:
+        deleted:
+          type: boolean
+          enum: [true]
+        id:
+          type: string
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      description: Unauthenticated liveness probe.
+      security: []
+      tags: [Meta]
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, version, uptime_seconds]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  version:
+                    type: string
+                  uptime_seconds:
+                    type: number
+
+  /v1/me:
+    get:
+      operationId: getMe
+      summary: Get authenticated account
+      description: Returns info about the authenticated account and API key.
+      tags: [Meta]
+      responses:
+        "200":
+          description: Account info
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [account, api_key]
+                properties:
+                  account:
+                    type: object
+                    required: [id, name, created_at]
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+                  api_key:
+                    type: object
+                    required: [id, name, prefix]
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      prefix:
+                        type: string
+        "404":
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/inboxes:
+    post:
+      operationId: createInbox
+      summary: Create inbox
+      description: Provisions a new inbox (email address) for the authenticated account.
+      tags: [Inboxes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, domain]
+              properties:
+                username:
+                  type: string
+                  description: Local part of the email address.
+                  example: alice
+                domain:
+                  type: string
+                  description: Domain for the inbox.
+                  example: yourdomain.com
+                display_name:
+                  type: string
+                  nullable: true
+                  example: Alice Agent
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  example: {}
+      responses:
+        "201":
+          description: Inbox created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inbox"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Inbox already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    get:
+      operationId: listInboxes
+      summary: List inboxes
+      description: Returns all inboxes for the authenticated account, newest first.
+      tags: [Inboxes]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: starting_after
+          in: query
+          description: Cursor for pagination (inbox ID of the last item on the previous page).
+          schema:
+            type: string
+        - name: address
+          in: query
+          description: Filter by exact email address.
+          schema:
+            type: string
+            format: email
+      responses:
+        "200":
+          description: List of inboxes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxList"
+        "400":
+          description: Invalid cursor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/inboxes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Inbox ID (email address).
+        schema:
+          type: string
+
+    get:
+      operationId: getInbox
+      summary: Get inbox
+      tags: [Inboxes]
+      responses:
+        "200":
+          description: Inbox object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inbox"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    patch:
+      operationId: updateInbox
+      summary: Update inbox
+      description: Update display_name or metadata. Address is immutable.
+      tags: [Inboxes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: [string, "null"]
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Updated inbox
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inbox"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      operationId: deleteInbox
+      summary: Delete inbox
+      description: Hard-deletes the inbox and stops accepting mail at that address.
+      tags: [Inboxes]
+      responses:
+        "200":
+          description: Deletion confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedResource"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/threads:
+    get:
+      operationId: listThreads
+      summary: List threads
+      description: Returns threads for a given inbox, ordered by most recent activity.
+      tags: [Threads]
+      parameters:
+        - name: inbox_email_address
+          in: query
+          required: true
+          schema:
+            type: string
+            format: email
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: starting_after
+          in: query
+          description: Cursor for pagination (thread ID of the last item).
+          schema:
+            type: string
+        - name: participant
+          in: query
+          description: Filter threads by an email address that appears as sender or recipient.
+          schema:
+            type: string
+            format: email
+      responses:
+        "200":
+          description: List of threads (each with nested messages)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ThreadList"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Inbox not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/threads/{id}:
+    get:
+      operationId: getThread
+      summary: Get thread
+      description: Retrieve a thread with all its messages.
+      tags: [Threads]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Thread with messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Thread"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/threads/search:
+    post:
+      operationId: searchThreads
+      summary: Semantic search threads
+      description: >
+        Performs vector similarity search across thread messages using pgvector
+        embeddings (Xenova/all-MiniLM-L6-v2). Requires embeddings to be enabled.
+      tags: [Threads]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                  description: Natural-language search query.
+                inbox_email_address:
+                  type: string
+                  format: email
+                  description: Optional — restrict search to a single inbox.
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+                  default: 10
+      responses:
+        "200":
+          description: Matching threads ordered by similarity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ThreadSearchList"
+        "400":
+          description: Validation error or embeddings not enabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Inbox not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/messages:
+    post:
+      operationId: sendMessage
+      summary: Send message
+      description: >
+        Send an outbound email. Creates a new thread unless in_reply_to_thread_id
+        is provided, in which case the message is appended to that thread.
+      tags: [Messages]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inbox_email_address, to]
+              properties:
+                inbox_email_address:
+                  type: string
+                  format: email
+                  description: Sending inbox.
+                to:
+                  oneOf:
+                    - type: string
+                      format: email
+                    - type: array
+                      items:
+                        type: string
+                        format: email
+                cc:
+                  oneOf:
+                    - type: string
+                      format: email
+                    - type: array
+                      items:
+                        type: string
+                        format: email
+                bcc:
+                  oneOf:
+                    - type: string
+                      format: email
+                    - type: array
+                      items:
+                        type: string
+                        format: email
+                subject:
+                  type: string
+                text:
+                  type: string
+                  description: Plain-text body. At least one of text or html is required.
+                html:
+                  type: string
+                  description: HTML body. At least one of text or html is required.
+                in_reply_to_thread_id:
+                  type: string
+                  description: Reply in this thread instead of starting a new one.
+                headers:
+                  type: object
+                  additionalProperties: true
+                  description: Custom RFC headers to inject.
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Inbox or thread not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    get:
+      operationId: listMessages
+      summary: List messages
+      description: List messages with optional filters. Returns newest first.
+      tags: [Messages]
+      parameters:
+        - name: inbox_email_address
+          in: query
+          schema:
+            type: string
+            format: email
+        - name: thread_id
+          in: query
+          schema:
+            type: string
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [inbound, outbound]
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: email
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: email
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: starting_after
+          in: query
+          description: Cursor for pagination (message ID of the last item).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageList"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Inbox not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/messages/{id}:
+    get:
+      operationId: getMessage
+      summary: Get message
+      tags: [Messages]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Message object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/messages/{id}/raw:
+    get:
+      operationId: getRawMessage
+      summary: Get raw message
+      description: Returns the raw RFC 822 (.eml) source of a message.
+      tags: [Messages]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Raw RFC 822 message
+          content:
+            text/plain:
+              schema:
+                type: string
+        "404":
+          description: Not found or raw source not preserved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/webhook_endpoints:
+    post:
+      operationId: createWebhookEndpoint
+      summary: Create webhook endpoint
+      description: >
+        Register a URL to receive event deliveries. The signing_secret is returned
+        only on creation — store it securely.
+      tags: [Webhook Endpoints]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: Must be HTTPS.
+                description:
+                  type: string
+                subscribed_events:
+                  type: array
+                  items:
+                    type: string
+                  description: >
+                    Event types to receive. Defaults to all events when omitted.
+                  example:
+                    - message.received
+                    - thread.created
+      responses:
+        "201":
+          description: Webhook endpoint created (includes signing_secret)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookEndpointWithSecret"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    get:
+      operationId: listWebhookEndpoints
+      summary: List webhook endpoints
+      tags: [Webhook Endpoints]
+      responses:
+        "200":
+          description: List of webhook endpoints
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookEndpointList"
+
+  /v1/webhook_endpoints/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      operationId: getWebhookEndpoint
+      summary: Get webhook endpoint
+      description: Returns the endpoint. signing_secret is NOT included.
+      tags: [Webhook Endpoints]
+      responses:
+        "200":
+          description: Webhook endpoint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookEndpoint"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    patch:
+      operationId: updateWebhookEndpoint
+      summary: Update webhook endpoint
+      tags: [Webhook Endpoints]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+                description:
+                  type: [string, "null"]
+                subscribed_events:
+                  type: array
+                  items:
+                    type: string
+                is_enabled:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated webhook endpoint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookEndpoint"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      operationId: deleteWebhookEndpoint
+      summary: Delete webhook endpoint
+      tags: [Webhook Endpoints]
+      responses:
+        "200":
+          description: Deletion confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedResource"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/webhook_endpoints/{id}/rotate_secret:
+    post:
+      operationId: rotateWebhookSecret
+      summary: Rotate signing secret
+      description: Generates a new signing secret. Returns the new value once — store it immediately.
+      tags: [Webhook Endpoints]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: New signing secret
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, signing_secret]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  signing_secret:
+                    type: string
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /webhooks/inbound:
+    post:
+      operationId: receiveInboundMail
+      summary: Receive inbound mail (provider webhook)
+      description: >
+        Internal endpoint called by the inbound mail provider (e.g. CloudMailin)
+        when external mail arrives at one of your inboxes. Verified via HMAC
+        signature in the X-AgentMail-Signature header.
+      security: []
+      tags: [Internal Webhooks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Provider-specific JSON payload.
+              additionalProperties: true
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    enum: [true]
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid HMAC signature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /webhooks/outbound-status:
+    post:
+      operationId: receiveOutboundStatus
+      summary: Receive delivery status (provider webhook)
+      description: >
+        Internal endpoint called by the outbound provider with
+        delivery/bounce status updates.
+      security: []
+      tags: [Internal Webhooks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    enum: [true]
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid HMAC signature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Message not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"

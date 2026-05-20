@@ -45,3 +45,20 @@ export const splitReferences = (value?: string): string[] => {
     .filter((entry) => entry.length > 0)
     .map((entry) => normalizeMessageId(entry));
 };
+
+export const extractEmailAddress = (value: string): string => {
+  const trimmed = value.trim();
+  const match = trimmed.match(/<([^>]+)>/);
+  return normalizeEmail(match ? match[1] : trimmed);
+};
+
+export const parseAddressList = (value: unknown): string[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) =>
+      typeof entry === "string" ? entry.split(",") : [],
+    );
+  }
+  if (typeof value === "string") return value.split(",");
+  return [];
+};
