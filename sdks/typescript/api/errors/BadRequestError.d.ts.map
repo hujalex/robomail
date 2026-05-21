@@ -1,0 +1,1 @@
+{"version":3,"file":"BadRequestError.d.ts","sourceRoot":"","sources":["BadRequestError.ts"],"names":[],"mappings":"AAEA,OAAO,KAAK,KAAK,IAAI,MAAM,qBAAqB,CAAC;AACjD,OAAO,KAAK,MAAM,MAAM,uBAAuB,CAAC;AAChD,OAAO,KAAK,KAAK,gBAAgB,MAAM,aAAa,CAAC;AAErD,qBAAa,eAAgB,SAAQ,MAAM,CAAC,qBAAqB;gBACjD,IAAI,EAAE,gBAAgB,CAAC,MAAM,EAAE,WAAW,CAAC,EAAE,IAAI,CAAC,WAAW;CAc5E"}

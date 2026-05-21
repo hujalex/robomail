@@ -1,0 +1,1 @@
+{"version":3,"file":"ConflictError.d.ts","sourceRoot":"","sources":["ConflictError.ts"],"names":[],"mappings":"AAEA,OAAO,KAAK,KAAK,IAAI,MAAM,qBAAqB,CAAC;AACjD,OAAO,KAAK,MAAM,MAAM,uBAAuB,CAAC;AAChD,OAAO,KAAK,KAAK,gBAAgB,MAAM,aAAa,CAAC;AAErD,qBAAa,aAAc,SAAQ,MAAM,CAAC,qBAAqB;gBAC/C,IAAI,EAAE,gBAAgB,CAAC,MAAM,EAAE,WAAW,CAAC,EAAE,IAAI,CAAC,WAAW;CAc5E"}

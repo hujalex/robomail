@@ -1,0 +1,16 @@
+import type * as AgentmailDemoApi from "../../../../index.js";
+/**
+ * @example
+ *     {}
+ */
+export interface ListMessagesRequest {
+    inbox_email_address?: string;
+    thread_id?: string;
+    direction?: AgentmailDemoApi.ListMessagesRequestDirection;
+    from?: string;
+    to?: string;
+    limit?: number;
+    /** Cursor for pagination (message ID of the last item). */
+    starting_after?: string;
+}
+//# sourceMappingURL=ListMessagesRequest.d.ts.map

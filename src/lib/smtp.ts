@@ -29,14 +29,17 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
     }
   }
 
+  const body = opts.html
+    ? { html: opts.html, text: opts.text ?? undefined }
+    : { text: opts.text ?? "" };
+
   const { error } = await resend.emails.send({
     from: opts.from,
     to: opts.to,
     cc: opts.cc?.length ? opts.cc : undefined,
     bcc: opts.bcc?.length ? opts.bcc : undefined,
     subject: opts.subject ?? "",
-    text: opts.text ?? undefined,
-    html: opts.html ?? undefined,
+    ...body,
     headers,
   });
 
