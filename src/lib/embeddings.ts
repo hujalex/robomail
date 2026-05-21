@@ -1,24 +1,21 @@
-import { env, pipeline } from "@xenova/transformers";
-
 const DEFAULT_MODEL = "Xenova/all-MiniLM-L6-v2";
 
-let extractorPromise: ReturnType<typeof pipeline> | null = null;
+let extractorPromise: Promise<unknown> | null = null;
 
-const getExtractor = () => {
+const getExtractor = async () => {
   if (!extractorPromise) {
+    const { env, pipeline } = await import("@xenova/transformers");
     if (process.env.TRANSFORMERS_CACHE) {
       env.cacheDir = process.env.TRANSFORMERS_CACHE;
     }
     const modelId = process.env.TRANSFORMERS_MODEL ?? DEFAULT_MODEL;
-    extractorPromise = pipeline("feature-extraction", modelId, {
-      quantized: true,
-    });
+    extractorPromise = pipeline("feature-extraction", modelId, { quantized: true });
   }
   return extractorPromise;
 };
 
 export const embeddingsEnabled = (): boolean =>
-  process.env.EMBEDDINGS_ENABLED !== "false";
+  process.env.EMBEDDINGS_ENABLED === "true";
 
 export const createEmbedding = async (input: string): Promise<number[]> => {
   const extractor = await getExtractor();
@@ -34,7 +31,6 @@ export const createEmbedding = async (input: string): Promise<number[]> => {
     throw new Error("Transformers.js embedding output missing data");
   }
   const values = Array.from(data);
-  const norm =
-    values.reduce((sum, value) => sum + value * value, 0) ** 0.5 || 1;
+  const norm = values.reduce((sum, value) => sum + value * value, 0) ** 0.5 || 1;
   return values.map((value) => value / norm);
 };

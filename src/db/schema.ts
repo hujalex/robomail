@@ -1,12 +1,10 @@
 import {
   pgTable,
-  pgSchema,
   uuid,
   text,
   timestamp,
   boolean,
   jsonb,
-  primaryKey,
   index,
   uniqueIndex,
   check,
@@ -40,19 +38,6 @@ const vector = (dimensions: number) =>
   });
 
 // =====================================================
-// Neon Auth (managed by Neon — referenced, not migrated)
-// =====================================================
-
-export const neonAuth = pgSchema("neon_auth");
-
-export const neonAuthUsers = neonAuth.table("users", {
-  id: uuid("id").primaryKey(),
-  email: text("email"),
-  name: text("name"),
-  createdAt: timestamp("created_at", { withTimezone: true }),
-});
-
-// =====================================================
 // accounts — your customers (tenants); unit of data isolation
 // =====================================================
 
@@ -66,37 +51,6 @@ export const accounts = pgTable("accounts", {
 
 export type Account = typeof accounts.$inferSelect;
 export type NewAccount = typeof accounts.$inferInsert;
-
-// =====================================================
-// account_members — joins Neon Auth users to accounts
-// =====================================================
-
-export const accountMembers = pgTable(
-  "account_members",
-  {
-    accountId: uuid("account_id")
-      .notNull()
-      .references(() => accounts.id, { onDelete: "cascade" }),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => neonAuthUsers.id, { onDelete: "cascade" }),
-    role: text("role").notNull().default("member"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.accountId, t.userId] }),
-    userIdx: index("account_members_user_idx").on(t.userId),
-    roleCheck: check(
-      "account_members_role_check",
-      sql`${t.role} in ('owner', 'member')`,
-    ),
-  }),
-);
-
-export type AccountMember = typeof accountMembers.$inferSelect;
-export type NewAccountMember = typeof accountMembers.$inferInsert;
 
 // =====================================================
 // api_keys — programmatic credentials
@@ -293,21 +247,9 @@ export type NewWebhookEndpoint = typeof webhookEndpoints.$inferInsert;
 // =====================================================
 
 export const accountsRelations = relations(accounts, ({ many }) => ({
-  members: many(accountMembers),
   apiKeys: many(apiKeys),
   inboxes: many(inboxes),
   webhookEndpoints: many(webhookEndpoints),
-}));
-
-export const accountMembersRelations = relations(accountMembers, ({ one }) => ({
-  account: one(accounts, {
-    fields: [accountMembers.accountId],
-    references: [accounts.id],
-  }),
-  user: one(neonAuthUsers, {
-    fields: [accountMembers.userId],
-    references: [neonAuthUsers.id],
-  }),
 }));
 
 export const apiKeysRelations = relations(apiKeys, ({ one }) => ({

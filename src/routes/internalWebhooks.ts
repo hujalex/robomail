@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { Webhook } from "svix";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { inboxes, messages, threads } from "../db/schema.js";
@@ -13,87 +14,87 @@ import {
 } from "../lib/email.js";
 import { createEmbedding, embeddingsEnabled } from "../lib/embeddings.js";
 import { serializeMessage, serializeThread } from "../lib/serializers.js";
-import { deliverEvent, verifySignature } from "../lib/webhooks.js";
+import { deliverEvent } from "../lib/webhooks.js";
+import { timingSafeEqual } from "../lib/crypto.js";
 
 const router = new Hono();
 
+function verifyResendWebhook(secret: string, rawBody: string, headers: Record<string, string | undefined>): boolean {
+  try {
+    const wh = new Webhook(secret);
+    wh.verify(rawBody, headers as Record<string, string>);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Resend inbound email headers come as [{name, value}] array — convert to flat map
+function parseResendHeaders(headers: unknown): Record<string, string> {
+  if (!Array.isArray(headers)) return {};
+  const result: Record<string, string> = {};
+  for (const h of headers) {
+    if (h && typeof h === "object" && "name" in h && "value" in h) {
+      result[(h as { name: string }).name] = (h as { value: string }).value;
+    }
+  }
+  return result;
+}
+
 router.post("/inbound", async (c) => {
-  const secret = process.env.INBOUND_WEBHOOK_SECRET;
-  if (!secret) return c.json({ error: "INBOUND_WEBHOOK_SECRET is not configured" }, 500);
+  const secret = process.env.RESEND_WEBHOOK_SECRET;
+  if (!secret) return c.json({ error: "RESEND_WEBHOOK_SECRET is not configured" }, 500);
 
   const rawBody = await c.req.raw.text();
-  // CloudMailin sends HMAC SHA256 hex (no sha256= prefix) in X-Cloudmailin-Signature
-  const rawSig = c.req.header("x-cloudmailin-signature");
-  const signature = rawSig ? `sha256=${rawSig}` : undefined;
-  if (!verifySignature(secret, rawBody, signature)) return c.json({ error: "Invalid signature" }, 401);
 
-  let payload: Record<string, unknown>;
+  if (!verifyResendWebhook(secret, rawBody, {
+    "svix-id": c.req.header("svix-id"),
+    "svix-timestamp": c.req.header("svix-timestamp"),
+    "svix-signature": c.req.header("svix-signature"),
+  })) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  let envelope: Record<string, unknown>;
   try {
-    payload = JSON.parse(rawBody) as Record<string, unknown>;
+    envelope = JSON.parse(rawBody) as Record<string, unknown>;
   } catch {
     return c.json({ error: "Invalid JSON body" }, 400);
   }
 
-  const headers =
-    typeof payload.headers === "object" && payload.headers !== null
-      ? (payload.headers as Record<string, unknown>)
-      : {};
+  // Resend wraps email data in { type: "email.received", data: { ... } }
+  const payload = (
+    envelope.type === "email.received" && envelope.data && typeof envelope.data === "object"
+      ? envelope.data
+      : envelope
+  ) as Record<string, unknown>;
+
+  const headerMap = parseResendHeaders(payload.headers);
 
   const messageIdCandidate =
     (payload.message_id as string | undefined) ??
-    (payload.messageId as string | undefined) ??
-    (payload["message-id"] as string | undefined) ??
-    (headers["Message-ID"] as string | undefined) ??
-    (headers["message-id"] as string | undefined);
+    headerMap["Message-Id"] ??
+    headerMap["Message-ID"] ??
+    headerMap["message-id"];
 
   const inReplyToCandidate =
     (payload.in_reply_to as string | undefined) ??
-    (payload.inReplyTo as string | undefined) ??
-    (headers["In-Reply-To"] as string | undefined) ??
-    (headers["in-reply-to"] as string | undefined);
+    headerMap["In-Reply-To"] ??
+    headerMap["in-reply-to"];
 
   const referencesCandidate =
     (payload.references as string | undefined) ??
-    (headers["References"] as string | undefined) ??
-    (headers["references"] as string | undefined);
+    headerMap["References"] ??
+    headerMap["references"];
 
-  const fromCandidate =
-    (payload.from as string | undefined) ??
-    (payload.sender as string | undefined) ??
-    (headers["From"] as string | undefined) ??
-    (headers["from"] as string | undefined);
-
-  const toCandidate = payload.to ?? payload.recipients ?? headers["To"] ?? headers["to"];
-  const ccCandidate = payload.cc ?? headers["Cc"] ?? headers["cc"];
-  const bccCandidate = payload.bcc ?? headers["Bcc"] ?? headers["bcc"];
-
-  const subject =
-    (payload.subject as string | undefined) ??
-    (headers["Subject"] as string | undefined) ??
-    (headers["subject"] as string | undefined) ??
-    null;
-
-  const text =
-    (payload.plain as string | undefined) ??
-    (payload.text as string | undefined) ??
-    (payload["body-text"] as string | undefined) ??
-    (payload.body && typeof payload.body === "object"
-      ? (payload.body as { text?: string }).text
-      : undefined) ??
-    null;
-
-  const html =
-    (payload.html as string | undefined) ??
-    (payload.body && typeof payload.body === "object"
-      ? (payload.body as { html?: string }).html
-      : undefined) ??
-    null;
-
-  const rawMessage =
-    (payload.raw as string | undefined) ??
-    (payload.raw_message as string | undefined) ??
-    (payload.rawMessage as string | undefined) ??
-    null;
+  const fromCandidate = payload.from as string | undefined;
+  const toCandidate = payload.to;
+  const ccCandidate = payload.cc;
+  const bccCandidate = payload.bcc;
+  const subject = (payload.subject as string | undefined) ?? null;
+  const text = (payload.text as string | undefined) ?? null;
+  const html = (payload.html as string | undefined) ?? null;
+  const rawMessage = (payload.raw as string | undefined) ?? null;
 
   if (!fromCandidate) return c.json({ error: "Missing from address" }, 400);
 
@@ -175,7 +176,7 @@ router.post("/inbound", async (c) => {
       subject,
       bodyText: text,
       bodyHtml: html,
-      headers: headers as Record<string, unknown>,
+      headers: headerMap,
       raw: rawMessage,
       embedding: embedding ?? undefined,
     })
@@ -192,35 +193,39 @@ router.post("/inbound", async (c) => {
 });
 
 router.post("/outbound-status", async (c) => {
-  const secret = process.env.OUTBOUND_WEBHOOK_SECRET;
-  if (!secret) return c.json({ error: "OUTBOUND_WEBHOOK_SECRET is not configured" }, 500);
+  const secret = process.env.RESEND_WEBHOOK_SECRET;
+  if (!secret) return c.json({ error: "RESEND_WEBHOOK_SECRET is not configured" }, 500);
 
   const rawBody = await c.req.raw.text();
-  // CloudMailin sends HMAC SHA256 hex (no sha256= prefix) in X-Cloudmailin-Signature
-  const rawSig = c.req.header("x-cloudmailin-signature");
-  const signature = rawSig ? `sha256=${rawSig}` : undefined;
-  if (!verifySignature(secret, rawBody, signature)) return c.json({ error: "Invalid signature" }, 401);
 
-  let payload: Record<string, unknown>;
+  if (!verifyResendWebhook(secret, rawBody, {
+    "svix-id": c.req.header("svix-id"),
+    "svix-timestamp": c.req.header("svix-timestamp"),
+    "svix-signature": c.req.header("svix-signature"),
+  })) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  let envelope: Record<string, unknown>;
   try {
-    payload = JSON.parse(rawBody) as Record<string, unknown>;
+    envelope = JSON.parse(rawBody) as Record<string, unknown>;
   } catch {
     return c.json({ error: "Invalid JSON body" }, 400);
   }
 
+  const eventType = envelope.type as string | undefined;
+  const data = (envelope.data ?? {}) as Record<string, unknown>;
+
   const messageId =
-    (payload.message_id as string | undefined) ??
-    (payload.messageId as string | undefined) ??
-    (payload.id as string | undefined);
+    (data.message_id as string | undefined) ??
+    (data.email_id as string | undefined) ??
+    (data.id as string | undefined);
   if (!messageId) return c.json({ error: "Missing message_id" }, 400);
 
-  const status =
-    (payload.status as string | undefined) ?? (payload.event as string | undefined);
-
   let normalizedStatus: "delivered" | "bounced" | null = null;
-  if (status === "delivered" || status === "message.delivered") normalizedStatus = "delivered";
-  if (status === "bounced" || status === "message.bounced") normalizedStatus = "bounced";
-  if (!normalizedStatus) return c.json({ error: "Unsupported status" }, 400);
+  if (eventType === "email.delivered") normalizedStatus = "delivered";
+  if (eventType === "email.bounced" || eventType === "email.delivery_delayed") normalizedStatus = "bounced";
+  if (!normalizedStatus) return c.json({ error: "Unsupported event type" }, 400);
 
   const [updated] = await db
     .update(messages)

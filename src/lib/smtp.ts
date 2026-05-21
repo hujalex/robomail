@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 export interface SendEmailOptions {
   from: string;
@@ -14,46 +14,34 @@ export interface SendEmailOptions {
   extraHeaders?: Record<string, unknown>;
 }
 
-function buildTransport() {
-  const host = process.env.CLOUDMAILIN_SMTP_HOST;
-  const port = parseInt(process.env.CLOUDMAILIN_SMTP_PORT ?? "587", 10);
-  const user = process.env.CLOUDMAILIN_SMTP_USER;
-  const pass = process.env.CLOUDMAILIN_SMTP_PASS;
-
-  if (!host || !user || !pass) {
-    throw new Error("Missing CLOUDMAILIN_SMTP_HOST, CLOUDMAILIN_SMTP_USER, or CLOUDMAILIN_SMTP_PASS");
-  }
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
-}
-
 export async function sendEmail(opts: SendEmailOptions): Promise<void> {
-  const transport = buildTransport();
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("Missing RESEND_API_KEY");
+
+  const resend = new Resend(apiKey);
 
   const headers: Record<string, string> = { "Message-ID": opts.messageId };
   if (opts.inReplyTo) headers["In-Reply-To"] = opts.inReplyTo;
-  if (opts.references && opts.references.length > 0) {
-    headers["References"] = opts.references.join(" ");
-  }
+  if (opts.references?.length) headers["References"] = opts.references.join(" ");
   if (opts.extraHeaders) {
     for (const [k, v] of Object.entries(opts.extraHeaders)) {
       if (typeof v === "string") headers[k] = v;
     }
   }
 
-  await transport.sendMail({
+  const body = opts.html
+    ? { html: opts.html, text: opts.text ?? undefined }
+    : { text: opts.text ?? "" };
+
+  const { error } = await resend.emails.send({
     from: opts.from,
     to: opts.to,
     cc: opts.cc?.length ? opts.cc : undefined,
     bcc: opts.bcc?.length ? opts.bcc : undefined,
-    subject: opts.subject ?? undefined,
-    text: opts.text ?? undefined,
-    html: opts.html ?? undefined,
+    subject: opts.subject ?? "",
+    ...body,
     headers,
   });
+
+  if (error) throw new Error(`Resend error: ${error.message}`);
 }
