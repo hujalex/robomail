@@ -21,6 +21,7 @@ import {
 } from "../lib/parsers.js";
 import { serializeMessage } from "../lib/serializers.js";
 import { deliverEvent } from "../lib/webhooks.js";
+import { sendEmail } from "../lib/smtp.js";
 
 const router = new Hono<{ Variables: AuthVariables }>();
 
@@ -142,6 +143,28 @@ router.post("/", async (c) => {
     .returning();
 
   await db.update(threads).set({ lastMessageAt: new Date() }).where(eq(threads.id, threadId));
+
+  try {
+    await sendEmail({
+      from: inbox.address,
+      to: toAddresses,
+      cc: ccAddresses,
+      bcc: bccAddresses,
+      subject,
+      text,
+      html,
+      messageId: messageId,
+      inReplyTo,
+      references: inReplyTo ? [inReplyTo] : [],
+      extraHeaders: headersResult.value,
+    });
+  } catch (err) {
+    console.error("SMTP send failed", { messageId, error: err });
+    await db.update(messages).set({ status: "bounced" }).where(eq(messages.id, messageId));
+    await deliverEvent(c.get("accountId"), "message.bounced", serializeMessage({ ...createdMessage, status: "bounced" }));
+    return c.json({ error: "Failed to send email" }, 502);
+  }
+
   await deliverEvent(c.get("accountId"), "message.sent", serializeMessage(createdMessage));
   return c.json(serializeMessage(createdMessage), 201);
 });

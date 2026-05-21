@@ -11,3 +11,11 @@ groups:
           location: local-file-system
           path: ../sdks/typescript
         version: 3.70.7
+        output: 
+          location: npm
+          package-name: robomail
+        config: 
+          namespaceExport: robomail
+          
+
+

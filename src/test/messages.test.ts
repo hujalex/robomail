@@ -24,6 +24,7 @@ const { mockDb, chain } = vi.hoisted(() => {
 
 vi.mock("../db/client.js", () => ({ db: mockDb }));
 vi.mock("../lib/webhooks.js", () => ({ deliverEvent: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("../lib/smtp.js", () => ({ sendEmail: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("../lib/embeddings.js", () => ({
   embeddingsEnabled: vi.fn().mockReturnValue(false),
   createEmbedding: vi.fn(),

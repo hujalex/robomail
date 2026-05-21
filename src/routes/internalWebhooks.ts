@@ -22,7 +22,9 @@ router.post("/inbound", async (c) => {
   if (!secret) return c.json({ error: "INBOUND_WEBHOOK_SECRET is not configured" }, 500);
 
   const rawBody = await c.req.raw.text();
-  const signature = c.req.header("x-agentmail-signature");
+  // CloudMailin sends HMAC SHA256 hex (no sha256= prefix) in X-Cloudmailin-Signature
+  const rawSig = c.req.header("x-cloudmailin-signature");
+  const signature = rawSig ? `sha256=${rawSig}` : undefined;
   if (!verifySignature(secret, rawBody, signature)) return c.json({ error: "Invalid signature" }, 401);
 
   let payload: Record<string, unknown>;
@@ -194,7 +196,9 @@ router.post("/outbound-status", async (c) => {
   if (!secret) return c.json({ error: "OUTBOUND_WEBHOOK_SECRET is not configured" }, 500);
 
   const rawBody = await c.req.raw.text();
-  const signature = c.req.header("x-agentmail-signature");
+  // CloudMailin sends HMAC SHA256 hex (no sha256= prefix) in X-Cloudmailin-Signature
+  const rawSig = c.req.header("x-cloudmailin-signature");
+  const signature = rawSig ? `sha256=${rawSig}` : undefined;
   if (!verifySignature(secret, rawBody, signature)) return c.json({ error: "Invalid signature" }, 401);
 
   let payload: Record<string, unknown>;
