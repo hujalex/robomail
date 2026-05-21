@@ -13,19 +13,27 @@ import {
 } from "../lib/email.js";
 import { createEmbedding, embeddingsEnabled } from "../lib/embeddings.js";
 import { serializeMessage, serializeThread } from "../lib/serializers.js";
-import { deliverEvent, verifySignature } from "../lib/webhooks.js";
+import { deliverEvent } from "../lib/webhooks.js";
+import { timingSafeEqual } from "../lib/crypto.js";
 
 const router = new Hono();
 
+function verifyBasicAuth(authHeader: string | undefined, user: string, pass: string): boolean {
+  if (!authHeader?.startsWith("Basic ")) return false;
+  const expected = Buffer.from(`${user}:${pass}`).toString("base64");
+  return timingSafeEqual(authHeader.slice(6), expected);
+}
+
 router.post("/inbound", async (c) => {
-  const secret = process.env.INBOUND_WEBHOOK_SECRET;
-  if (!secret) return c.json({ error: "INBOUND_WEBHOOK_SECRET is not configured" }, 500);
+  const user = process.env.CLOUDMAILIN_INBOUND_USER;
+  const pass = process.env.CLOUDMAILIN_INBOUND_PASS;
+  if (!user || !pass) return c.json({ error: "CLOUDMAILIN_INBOUND_USER or CLOUDMAILIN_INBOUND_PASS is not configured" }, 500);
+
+  if (!verifyBasicAuth(c.req.header("authorization"), user, pass)) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
 
   const rawBody = await c.req.raw.text();
-  // CloudMailin sends HMAC SHA256 hex (no sha256= prefix) in X-Cloudmailin-Signature
-  const rawSig = c.req.header("x-cloudmailin-signature");
-  const signature = rawSig ? `sha256=${rawSig}` : undefined;
-  if (!verifySignature(secret, rawBody, signature)) return c.json({ error: "Invalid signature" }, 401);
 
   let payload: Record<string, unknown>;
   try {
@@ -195,11 +203,12 @@ router.post("/outbound-status", async (c) => {
   const secret = process.env.OUTBOUND_WEBHOOK_SECRET;
   if (!secret) return c.json({ error: "OUTBOUND_WEBHOOK_SECRET is not configured" }, 500);
 
+  const bearer = c.req.header("authorization");
+  if (!bearer || !timingSafeEqual(bearer, `Bearer ${secret}`)) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
   const rawBody = await c.req.raw.text();
-  // CloudMailin sends HMAC SHA256 hex (no sha256= prefix) in X-Cloudmailin-Signature
-  const rawSig = c.req.header("x-cloudmailin-signature");
-  const signature = rawSig ? `sha256=${rawSig}` : undefined;
-  if (!verifySignature(secret, rawBody, signature)) return c.json({ error: "Invalid signature" }, 401);
 
   let payload: Record<string, unknown>;
   try {

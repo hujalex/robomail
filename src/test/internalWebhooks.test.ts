@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 import { Hono } from "hono";
 import { ACCOUNT_ID, mockInbox, mockThread, mockMessage } from "./helpers.js";
 
-const { mockDb, chain, mockVerifySignature, mockDeliverEvent } = vi.hoisted(() => {
+const { mockDb, chain, mockDeliverEvent } = vi.hoisted(() => {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   for (const m of ["from", "where", "set", "values", "orderBy", "groupBy"]) {
     chain[m] = vi.fn().mockReturnValue(chain);
@@ -24,16 +24,12 @@ const { mockDb, chain, mockVerifySignature, mockDeliverEvent } = vi.hoisted(() =
   return {
     mockDb,
     chain,
-    mockVerifySignature: vi.fn().mockReturnValue(true),
     mockDeliverEvent: vi.fn().mockResolvedValue(undefined),
   };
 });
 
 vi.mock("../db/client.js", () => ({ db: mockDb }));
-vi.mock("../lib/webhooks.js", () => ({
-  verifySignature: mockVerifySignature,
-  deliverEvent: mockDeliverEvent,
-}));
+vi.mock("../lib/webhooks.js", () => ({ deliverEvent: mockDeliverEvent }));
 vi.mock("../lib/embeddings.js", () => ({
   embeddingsEnabled: vi.fn().mockReturnValue(false),
   createEmbedding: vi.fn(),
@@ -44,10 +40,16 @@ import internalWebhooksRouter from "../routes/internalWebhooks.js";
 const app = new Hono();
 app.route("/", internalWebhooksRouter);
 
-function inboundPayload(overrides: Record<string, unknown> = {}) {
+// Basic Auth header for test-user:test-pass
+const VALID_INBOUND_AUTH = "Basic dGVzdC11c2VyOnRlc3QtcGFzcw==";
+
+function inboundRequest(overrides: Record<string, unknown> = {}, auth = VALID_INBOUND_AUTH) {
   return {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth ? { Authorization: auth } : {}),
+    },
     body: JSON.stringify({
       from: "bob@external.com",
       to: "alice@test.com",
@@ -59,11 +61,22 @@ function inboundPayload(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function outboundStatusRequest(body: Record<string, unknown>, auth = "Bearer test-secret") {
+  return {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth ? { Authorization: auth } : {}),
+    },
+    body: JSON.stringify(body),
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  process.env.INBOUND_WEBHOOK_SECRET = "test-secret";
+  process.env.CLOUDMAILIN_INBOUND_USER = "test-user";
+  process.env.CLOUDMAILIN_INBOUND_PASS = "test-pass";
   process.env.OUTBOUND_WEBHOOK_SECRET = "test-secret";
-  mockVerifySignature.mockReturnValue(true);
   mockDeliverEvent.mockResolvedValue(undefined);
   mockDb.query.inboxes.findFirst.mockResolvedValue(null);
   mockDb.query.threads.findFirst.mockResolvedValue(null);
@@ -79,34 +92,36 @@ beforeEach(() => {
 });
 
 describe("POST /inbound", () => {
-  it("returns 401 for invalid signature", async () => {
-    mockVerifySignature.mockReturnValue(false);
-
-    const res = await app.request("/inbound", inboundPayload());
+  it("returns 401 when Authorization header is missing", async () => {
+    const res = await app.request("/inbound", inboundRequest({}, ""));
     expect(res.status).toBe(401);
   });
 
-  it("returns 500 when INBOUND_WEBHOOK_SECRET is not set", async () => {
-    delete process.env.INBOUND_WEBHOOK_SECRET;
+  it("returns 401 when credentials are wrong", async () => {
+    const res = await app.request("/inbound", inboundRequest({}, "Basic d3Jvbmc6Y3JlZHM="));
+    expect(res.status).toBe(401);
+  });
 
-    const res = await app.request("/inbound", inboundPayload());
+  it("returns 500 when CLOUDMAILIN_INBOUND_USER is not set", async () => {
+    delete process.env.CLOUDMAILIN_INBOUND_USER;
+    const res = await app.request("/inbound", inboundRequest());
     expect(res.status).toBe(500);
   });
 
   it("returns 400 when from address is missing", async () => {
-    const res = await app.request("/inbound", inboundPayload({ from: undefined }));
+    const res = await app.request("/inbound", inboundRequest({ from: undefined }));
     expect(res.status).toBe(400);
     const body = await res.json() as any;
     expect(body.error).toMatch(/from/);
   });
 
   it("returns 400 when to address is missing", async () => {
-    const res = await app.request("/inbound", inboundPayload({ to: undefined }));
+    const res = await app.request("/inbound", inboundRequest({ to: undefined }));
     expect(res.status).toBe(400);
   });
 
   it("returns 404 when no matching inbox", async () => {
-    const res = await app.request("/inbound", inboundPayload());
+    const res = await app.request("/inbound", inboundRequest());
     expect(res.status).toBe(404);
   });
 
@@ -116,7 +131,7 @@ describe("POST /inbound", () => {
       .mockResolvedValueOnce([mockThread])
       .mockResolvedValueOnce([mockMessage]);
 
-    const res = await app.request("/inbound", inboundPayload());
+    const res = await app.request("/inbound", inboundRequest());
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.received).toBe(true);
@@ -135,14 +150,14 @@ describe("POST /inbound", () => {
   it("appends to an existing thread when In-Reply-To matches", async () => {
     mockDb.query.inboxes.findFirst.mockResolvedValue(mockInbox);
     mockDb.query.messages.findFirst
-      .mockResolvedValueOnce(null)          // duplicate check
-      .mockResolvedValueOnce(mockMessage);  // in-reply-to lookup
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(mockMessage);
     mockDb.query.threads.findFirst.mockResolvedValue(mockThread);
     chain.returning.mockResolvedValueOnce([{ ...mockMessage, id: "<reply@external.com>" }]);
 
     const res = await app.request(
       "/inbound",
-      inboundPayload({ message_id: "<reply@external.com>", in_reply_to: "<abc@test.com>" }),
+      inboundRequest({ message_id: "<reply@external.com>", in_reply_to: "<abc@test.com>" }),
     );
     expect(res.status).toBe(200);
     const threadCreatedCalls = mockDeliverEvent.mock.calls.filter(
@@ -155,37 +170,34 @@ describe("POST /inbound", () => {
     mockDb.query.inboxes.findFirst.mockResolvedValue(mockInbox);
     mockDb.query.messages.findFirst.mockResolvedValue(mockMessage);
 
-    const res = await app.request("/inbound", inboundPayload({ message_id: "<abc@test.com>" }));
+    const res = await app.request("/inbound", inboundRequest({ message_id: "<abc@test.com>" }));
     expect(res.status).toBe(200);
     expect(mockDeliverEvent).not.toHaveBeenCalled();
   });
 });
 
 describe("POST /outbound-status", () => {
-  function statusPayload(body: Record<string, unknown>) {
-    return {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    };
-  }
-
-  it("returns 401 for invalid signature", async () => {
-    mockVerifySignature.mockReturnValue(false);
-
+  it("returns 401 when Authorization header is missing", async () => {
     const res = await app.request(
       "/outbound-status",
-      statusPayload({ message_id: "x", status: "delivered" }),
+      outboundStatusRequest({ message_id: "x", status: "delivered" }, ""),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 when bearer token is wrong", async () => {
+    const res = await app.request(
+      "/outbound-status",
+      outboundStatusRequest({ message_id: "x", status: "delivered" }, "Bearer wrong"),
     );
     expect(res.status).toBe(401);
   });
 
   it("returns 500 when OUTBOUND_WEBHOOK_SECRET is not set", async () => {
     delete process.env.OUTBOUND_WEBHOOK_SECRET;
-
     const res = await app.request(
       "/outbound-status",
-      statusPayload({ message_id: "x", status: "delivered" }),
+      outboundStatusRequest({ message_id: "x", status: "delivered" }),
     );
     expect(res.status).toBe(500);
   });
@@ -195,7 +207,7 @@ describe("POST /outbound-status", () => {
 
     const res = await app.request(
       "/outbound-status",
-      statusPayload({ message_id: "<abc@test.com>", status: "delivered" }),
+      outboundStatusRequest({ message_id: "<abc@test.com>", status: "delivered" }),
     );
     expect(res.status).toBe(200);
     expect(mockDeliverEvent).toHaveBeenCalledWith(
@@ -210,7 +222,7 @@ describe("POST /outbound-status", () => {
 
     const res = await app.request(
       "/outbound-status",
-      statusPayload({ message_id: "<abc@test.com>", status: "bounced" }),
+      outboundStatusRequest({ message_id: "<abc@test.com>", status: "bounced" }),
     );
     expect(res.status).toBe(200);
     expect(mockDeliverEvent).toHaveBeenCalledWith(
@@ -223,13 +235,16 @@ describe("POST /outbound-status", () => {
   it("returns 400 for unsupported status", async () => {
     const res = await app.request(
       "/outbound-status",
-      statusPayload({ message_id: "<abc@test.com>", status: "unknown" }),
+      outboundStatusRequest({ message_id: "<abc@test.com>", status: "unknown" }),
     );
     expect(res.status).toBe(400);
   });
 
   it("returns 400 when message_id is missing", async () => {
-    const res = await app.request("/outbound-status", statusPayload({ status: "delivered" }));
+    const res = await app.request(
+      "/outbound-status",
+      outboundStatusRequest({ status: "delivered" }),
+    );
     expect(res.status).toBe(400);
   });
 
@@ -238,7 +253,7 @@ describe("POST /outbound-status", () => {
 
     const res = await app.request(
       "/outbound-status",
-      statusPayload({ message_id: "<missing@test.com>", status: "delivered" }),
+      outboundStatusRequest({ message_id: "<missing@test.com>", status: "delivered" }),
     );
     expect(res.status).toBe(404);
   });
