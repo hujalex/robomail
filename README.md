@@ -1,37 +1,22 @@
-Prerequisites:
+Robomail - AgentMail Clone
 
-- [Vercel CLI](https://vercel.com/docs/cli) installed globally
+Robomail serves to provide an API interface enabling agents and humans alike to deploy and manage email inboxes programmatically. Robomail manages the underlying infrastructure
 
-Environment variables:
 
-- DATABASE_URL
-- EMBEDDINGS_ENABLED (optional, set to "false" to disable embeddings)
-- TRANSFORMERS_MODEL (optional, default Xenova/all-MiniLM-L6-v2)
-- TRANSFORMERS_CACHE (optional, overrides transformers.js cache directory)
-- INBOUND_WEBHOOK_SECRET (verifies /webhooks/inbound)
-- OUTBOUND_WEBHOOK_SECRET (verifies /webhooks/outbound-status)
+Database
+We leverage NeonDB to store required information including accounts, inboxes, messages, and message threads
 
-To develop locally:
 
-```
-npm install
-vc dev
-```
+Mailing Service
+- Resend provides an inbound email service that makes a POST request to our API server whenever an email address receives a new message. Our API Server contains a webhook to process the POST request on-demand.
+- Resend furthermore provides an outbound email service that allows us to send emails to other email addresses
 
-```
-open http://localhost:3000
-```
+Software Development Kit (SDK)
 
-To build locally:
+Robomail's HTTP API server follows the OpenAPI standard enabling straightforward SDK generation in TypeScript through fern. The SDK provides an interface to programmatically interact with the robomail HTTP API server to manage agent inboxes.
 
-```
-npm install
-vc build
-```
 
-To deploy:
+Sending Emails
 
-```
-npm install
-vc deploy
-```
+
+Receiving Emails
