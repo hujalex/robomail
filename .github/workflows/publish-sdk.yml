@@ -28,14 +28,6 @@ jobs:
         env:
           FERN_TOKEN: ${{ secrets.FERN_TOKEN }}
 
-      - name: Install SDK dependencies
-        working-directory: sdks/typescript
-        run: npm install
-
-      - name: Build SDK
-        working-directory: sdks/typescript
-        run: npm run build
-
       - name: Publish to npm
         working-directory: sdks/typescript
         run: npm publish --provenance --access public
