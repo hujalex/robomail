@@ -13,7 +13,8 @@ const router = new Hono<{ Variables: AuthVariables }>();
 
 router.get("/", async (c) => {
   const inboxAddress = c.req.query("inbox_email_address");
-  if (!inboxAddress) return c.json({ error: "inbox_email_address is required" }, 400);
+  if (!inboxAddress)
+    return c.json({ error: "inbox_email_address is required" }, 400);
 
   const inbox = await db.query.inboxes.findFirst({
     where: and(
@@ -48,25 +49,37 @@ router.get("/", async (c) => {
 
     const participantThreadIds = participantRows.map((row) => row.threadId);
     if (participantThreadIds.length === 0) {
-      return c.json({ object: "list", data: [], has_more: false, next_cursor: null });
+      return c.json({
+        object: "list",
+        threads: [],
+        has_more: false,
+        next_cursor: null,
+      });
     }
     conditions.push(inArray(threads.id, participantThreadIds));
   }
 
   if (startingAfter) {
     const cursor = await db.query.threads.findFirst({
-      where: and(eq(threads.id, startingAfter), eq(threads.accountId, c.get("accountId"))),
+      where: and(
+        eq(threads.id, startingAfter),
+        eq(threads.accountId, c.get("accountId")),
+      ),
     });
     if (!cursor) return c.json({ error: "Invalid cursor" }, 400);
     const cursorTime = cursor.lastMessageAt ?? cursor.createdAt;
-    conditions.push(sql`coalesce(${threads.lastMessageAt}, ${threads.createdAt}) < ${cursorTime}`);
+    conditions.push(
+      sql`coalesce(${threads.lastMessageAt}, ${threads.createdAt}) < ${cursorTime}`,
+    );
   }
 
   const rows = await db
     .select()
     .from(threads)
     .where(and(...conditions))
-    .orderBy(desc(sql`coalesce(${threads.lastMessageAt}, ${threads.createdAt})`))
+    .orderBy(
+      desc(sql`coalesce(${threads.lastMessageAt}, ${threads.createdAt})`),
+    )
     .limit(limit + 1);
 
   const hasMore = rows.length > limit;
@@ -78,13 +91,22 @@ router.get("/", async (c) => {
     messageRows = await db
       .select()
       .from(messages)
-      .where(and(eq(messages.accountId, c.get("accountId")), inArray(messages.threadId, threadIds)))
+      .where(
+        and(
+          eq(messages.accountId, c.get("accountId")),
+          inArray(messages.threadId, threadIds),
+        ),
+      )
       .orderBy(asc(messages.createdAt));
   }
 
-  const messagesByThread = new Map<string, Array<typeof messages.$inferSelect>>();
+  const messagesByThread = new Map<
+    string,
+    Array<typeof messages.$inferSelect>
+  >();
   for (const message of messageRows) {
-    if (!messagesByThread.has(message.threadId)) messagesByThread.set(message.threadId, []);
+    if (!messagesByThread.has(message.threadId))
+      messagesByThread.set(message.threadId, []);
     messagesByThread.get(message.threadId)?.push(message);
   }
 
@@ -94,22 +116,32 @@ router.get("/", async (c) => {
 
   return c.json({
     object: "list",
-    data: threadObjects,
+    threads: threadObjects,
     has_more: hasMore,
-    next_cursor: hasMore ? (threadObjects[threadObjects.length - 1]?.id ?? null) : null,
+    next_cursor: hasMore
+      ? (threadObjects[threadObjects.length - 1]?.id ?? null)
+      : null,
   });
 });
 
 router.get("/:id", async (c) => {
   const thread = await db.query.threads.findFirst({
-    where: and(eq(threads.id, c.req.param("id")), eq(threads.accountId, c.get("accountId"))),
+    where: and(
+      eq(threads.id, c.req.param("id")),
+      eq(threads.accountId, c.get("accountId")),
+    ),
   });
   if (!thread) return c.json({ error: "Thread not found" }, 404);
 
   const messageRows = await db
     .select()
     .from(messages)
-    .where(and(eq(messages.threadId, thread.id), eq(messages.accountId, c.get("accountId"))))
+    .where(
+      and(
+        eq(messages.threadId, thread.id),
+        eq(messages.accountId, c.get("accountId")),
+      ),
+    )
     .orderBy(asc(messages.createdAt));
 
   return c.json(serializeThread(thread, messageRows));
@@ -127,11 +159,15 @@ router.post("/search", async (c) => {
   if (queryError) return c.json({ error: queryError }, 400);
 
   if (!embeddingsEnabled()) {
-    return c.json({ error: "Semantic search requires embeddings to be enabled" }, 400);
+    return c.json(
+      { error: "Semantic search requires embeddings to be enabled" },
+      400,
+    );
   }
 
   const limit = parseLimit(
-    typeof bodyResult.value.limit === "number" || typeof bodyResult.value.limit === "string"
+    typeof bodyResult.value.limit === "number" ||
+      typeof bodyResult.value.limit === "string"
       ? String(bodyResult.value.limit)
       : undefined,
     { min: 1, max: 50, fallback: 10 },
@@ -144,7 +180,10 @@ router.post("/search", async (c) => {
     }
     inbox = await db.query.inboxes.findFirst({
       where: and(
-        eq(inboxes.address, normalizeEmail(bodyResult.value.inbox_email_address)),
+        eq(
+          inboxes.address,
+          normalizeEmail(bodyResult.value.inbox_email_address),
+        ),
         eq(inboxes.accountId, c.get("accountId")),
       ),
     });
@@ -168,24 +207,43 @@ router.post("/search", async (c) => {
 
   const rows = result.rows as Array<{ threadId: string; similarity: number }>;
   if (rows.length === 0) {
-    return c.json({ object: "list", data: [], has_more: false, next_cursor: null });
+    return c.json({
+      object: "list",
+      threads: [],
+      has_more: false,
+      next_cursor: null,
+    });
   }
 
   const threadIds = rows.map((row) => row.threadId);
   const threadRows = await db
     .select()
     .from(threads)
-    .where(and(eq(threads.accountId, c.get("accountId")), inArray(threads.id, threadIds)));
+    .where(
+      and(
+        eq(threads.accountId, c.get("accountId")),
+        inArray(threads.id, threadIds),
+      ),
+    );
 
   const messageRows = await db
     .select()
     .from(messages)
-    .where(and(eq(messages.accountId, c.get("accountId")), inArray(messages.threadId, threadIds)))
+    .where(
+      and(
+        eq(messages.accountId, c.get("accountId")),
+        inArray(messages.threadId, threadIds),
+      ),
+    )
     .orderBy(asc(messages.createdAt));
 
-  const messagesByThread = new Map<string, Array<typeof messages.$inferSelect>>();
+  const messagesByThread = new Map<
+    string,
+    Array<typeof messages.$inferSelect>
+  >();
   for (const message of messageRows) {
-    if (!messagesByThread.has(message.threadId)) messagesByThread.set(message.threadId, []);
+    if (!messagesByThread.has(message.threadId))
+      messagesByThread.set(message.threadId, []);
     messagesByThread.get(message.threadId)?.push(message);
   }
 
@@ -201,7 +259,12 @@ router.post("/search", async (c) => {
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
-  return c.json({ object: "list", data: resultData, has_more: false, next_cursor: null });
+  return c.json({
+    object: "list",
+    threads: resultData,
+    has_more: false,
+    next_cursor: null,
+  });
 });
 
 export default router;

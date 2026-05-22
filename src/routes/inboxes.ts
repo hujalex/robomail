@@ -21,8 +21,8 @@ router.post("/", async (c) => {
   if (!bodyResult.ok) return c.json({ error: bodyResult.error }, 400);
 
   const { domain, username, display_name, metadata } = bodyResult.value;
-  const domainError = requireString(domain, "domain");
-  if (domainError) return c.json({ error: domainError }, 400);
+  const resolvedDomain = (typeof domain === "string" && domain) ? domain : process.env.DEFAULT_DOMAIN;
+  if (!resolvedDomain) return c.json({ error: "domain is required when DEFAULT_DOMAIN is not configured" }, 400);
   const usernameError = requireString(username, "username");
   if (usernameError) return c.json({ error: usernameError }, 400);
   if (display_name !== undefined && display_name !== null && typeof display_name !== "string") {
@@ -32,7 +32,7 @@ router.post("/", async (c) => {
   const metadataResult = parseMetadata(metadata, "metadata");
   if (!metadataResult.ok) return c.json({ error: metadataResult.error }, 400);
 
-  const address = `${normalizeEmail(username as string)}@${normalizeEmail(domain as string)}`;
+  const address = `${normalizeEmail(username as string)}@${normalizeEmail(resolvedDomain)}`;
   const existing = await db.query.inboxes.findFirst({ where: eq(inboxes.address, address) });
   if (existing) return c.json({ error: "Inbox already exists" }, 409);
 

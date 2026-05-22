@@ -205,12 +205,12 @@ components:
 
     ThreadList:
       type: object
-      required: [object, data, has_more]
+      required: [object, threads, has_more]
       properties:
         object:
           type: string
           enum: [list]
-        data:
+        threads:
           type: array
           items:
             $ref: "#/components/schemas/Thread"
@@ -362,7 +362,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [username, domain]
+              required: [username]
               properties:
                 username:
                   type: string
@@ -370,7 +370,7 @@ paths:
                   example: alice
                 domain:
                   type: string
-                  description: Domain for the inbox.
+                  description: Domain for the inbox. Defaults to the server's configured default domain if omitted.
                   example: yourdomain.com
                 display_name:
                   type: string
