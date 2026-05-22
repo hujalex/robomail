@@ -16,8 +16,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "build": "tsc"
   },
   "devDependencies": {
     "typescript": "^5.0.0"
