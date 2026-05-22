@@ -18,7 +18,7 @@ Robomail's HTTP API server follows the OpenAPI standard enabling straightforward
 Update SDK flow
 1. Change to teh API server or OpenAPI specification
 2. Push code normally to the repository
-3. To release: git tab vx.x.x && git push --tags
+3. To release: git tag vx.x.x && git push --tags
 4. Riggers the workflow - Fern generates the SDK and publishes to npm 
 
 Sending Emails
