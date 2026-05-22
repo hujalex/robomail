@@ -24,5 +24,6 @@ groups:
           location: npm
           package-name: robomail-sdk
           token: ${NPM_TOKEN}
+          version: ${PACKAGE_VERSION}
         config:
           namespaceExport: RoboMail
