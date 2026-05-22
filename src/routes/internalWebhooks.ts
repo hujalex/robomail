@@ -42,8 +42,8 @@ function parseResendHeaders(headers: unknown): Record<string, string> {
 }
 
 router.post("/inbound", async (c) => {
-  const secret = process.env.RESEND_WEBHOOK_SECRET;
-  if (!secret) return c.json({ error: "RESEND_WEBHOOK_SECRET is not configured" }, 500);
+  const secret = process.env.RESEND_INBOUND_WEBHOOK_SECRET;
+  if (!secret) return c.json({ error: "RESEND_INBOUND_WEBHOOK_SECRET is not configured" }, 500);
 
   const rawBody = await c.req.raw.text();
 
@@ -193,18 +193,12 @@ router.post("/inbound", async (c) => {
 });
 
 router.post("/outbound-status", async (c) => {
-  const secret = process.env.RESEND_WEBHOOK_SECRET;
-  if (!secret) return c.json({ error: "RESEND_WEBHOOK_SECRET is not configured" }, 500);
+  const deliveredSecret = process.env.RESEND_DELIVERED_WEBHOOK_SECRET;
+  const bouncedSecret = process.env.RESEND_BOUNCED_WEBHOOK_SECRET;
+  if (!deliveredSecret) return c.json({ error: "RESEND_DELIVERED_WEBHOOK_SECRET is not configured" }, 500);
+  if (!bouncedSecret) return c.json({ error: "RESEND_BOUNCED_WEBHOOK_SECRET is not configured" }, 500);
 
   const rawBody = await c.req.raw.text();
-
-  if (!verifyResendWebhook(secret, rawBody, {
-    "svix-id": c.req.header("svix-id"),
-    "svix-timestamp": c.req.header("svix-timestamp"),
-    "svix-signature": c.req.header("svix-signature"),
-  })) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
 
   let envelope: Record<string, unknown>;
   try {
@@ -214,6 +208,21 @@ router.post("/outbound-status", async (c) => {
   }
 
   const eventType = envelope.type as string | undefined;
+
+  const secret =
+    eventType === "email.delivered" ? deliveredSecret :
+    eventType === "email.bounced" || eventType === "email.delivery_delayed" ? bouncedSecret :
+    null;
+
+  if (!secret) return c.json({ error: "Unsupported event type" }, 400);
+
+  if (!verifyResendWebhook(secret, rawBody, {
+    "svix-id": c.req.header("svix-id"),
+    "svix-timestamp": c.req.header("svix-timestamp"),
+    "svix-signature": c.req.header("svix-signature"),
+  })) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
   const data = (envelope.data ?? {}) as Record<string, unknown>;
 
   const messageId =
@@ -222,10 +231,7 @@ router.post("/outbound-status", async (c) => {
     (data.id as string | undefined);
   if (!messageId) return c.json({ error: "Missing message_id" }, 400);
 
-  let normalizedStatus: "delivered" | "bounced" | null = null;
-  if (eventType === "email.delivered") normalizedStatus = "delivered";
-  if (eventType === "email.bounced" || eventType === "email.delivery_delayed") normalizedStatus = "bounced";
-  if (!normalizedStatus) return c.json({ error: "Unsupported event type" }, 400);
+  const normalizedStatus = eventType === "email.delivered" ? "delivered" : "bounced";
 
   const [updated] = await db
     .update(messages)
