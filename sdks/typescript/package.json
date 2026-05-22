@@ -4,6 +4,15 @@
   "description": "TypeScript SDK for the Robomail API — give AI agents their own email inboxes",
   "keywords": ["robomail", "email", "ai", "agent", "sdk", "inbox"],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hujalex/robomail.git",
+    "directory": "sdks/typescript"
+  },
+  "homepage": "https://github.com/hujalex/robomail/tree/main/sdks/typescript",
+  "bugs": {
+    "url": "https://github.com/hujalex/robomail/issues"
+  },
   "main": "./index.js",
   "module": "./index.js",
   "types": "./index.d.ts",
