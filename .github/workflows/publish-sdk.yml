@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write  # required for npm OIDC trusted publishing
+  id-token: write  # required for npm provenance
 
 jobs:
   publish:
@@ -17,17 +17,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-
-      - name: Install Fern
-        run: npm install -g fern-api
-
-      - name: Generate SDK
-        run: fern generate
-        env:
-          FERN_TOKEN: ${{ secrets.FERN_TOKEN }}
 
       - name: Publish to npm
         working-directory: sdks/typescript
         run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
