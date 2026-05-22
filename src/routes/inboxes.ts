@@ -51,8 +51,11 @@ router.post("/", async (c) => {
     return c.json(serializeInbox(result), 201);
   }
 
-  const existing = await db.query.inboxes.findFirst({ where: eq(inboxes.address, address) });
-  return c.json(serializeInbox(existing!), 200);
+  const existing = await db.query.inboxes.findFirst({
+    where: and(eq(inboxes.address, address), eq(inboxes.accountId, c.get("accountId"))),
+  });
+  if (!existing) return c.json({ error: "Address already claimed by another account" }, 409);
+  return c.json(serializeInbox(existing), 200);
 });
 
 router.get("/", async (c) => {
