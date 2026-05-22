@@ -25,6 +25,8 @@ jobs:
 
       - name: Generate SDK
         run: fern generate
+        env:
+          FERN_TOKEN: ${{ secrets.FERN_TOKEN }}
 
       - name: Install SDK dependencies
         working-directory: sdks/typescript
