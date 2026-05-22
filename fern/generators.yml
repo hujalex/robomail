@@ -14,4 +14,15 @@ groups:
           location: local-file-system
           path: ../sdks/typescript
         config:
-          namespaceExport: Robomail
+          namespaceExport: RoboMail
+
+  publish:
+    generators:
+      - name: fern-typescript-sdk
+        version: 3.70.7
+        output:
+          location: npm
+          package-name: robomail-sdk
+          token: ${NPM_TOKEN}
+        config:
+          namespaceExport: RoboMail
