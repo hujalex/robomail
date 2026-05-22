@@ -13,6 +13,6 @@ groups:
         output:
           location: local-file-system
           path: ../sdks/typescript
+          package-name: robomail-sdk
         config:
           namespaceExport: Robomail
-          packageName: robomail-sdk
