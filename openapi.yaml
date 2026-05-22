@@ -354,7 +354,7 @@ paths:
     post:
       operationId: createInbox
       summary: Create inbox
-      description: Provisions a new inbox (email address) for the authenticated account.
+      description: Provisions a new inbox (email address) for the authenticated account. Idempotent — returns the existing inbox if the address is already registered.
       tags: [Inboxes]
       requestBody:
         required: true
@@ -381,6 +381,12 @@ paths:
                   additionalProperties: true
                   example: {}
       responses:
+        "200":
+          description: Inbox already exists (returned as-is)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inbox"
         "201":
           description: Inbox created
           content:
@@ -389,12 +395,6 @@ paths:
                 $ref: "#/components/schemas/Inbox"
         "400":
           description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "409":
-          description: Inbox already exists
           content:
             application/json:
               schema:

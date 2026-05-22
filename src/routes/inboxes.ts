@@ -33,10 +33,8 @@ router.post("/", async (c) => {
   if (!metadataResult.ok) return c.json({ error: metadataResult.error }, 400);
 
   const address = `${normalizeEmail(username as string)}@${normalizeEmail(resolvedDomain)}`;
-  const existing = await db.query.inboxes.findFirst({ where: eq(inboxes.address, address) });
-  if (existing) return c.json({ error: "Inbox already exists" }, 409);
 
-  const [created] = await db
+  const [result] = await db
     .insert(inboxes)
     .values({
       id: address,
@@ -45,10 +43,16 @@ router.post("/", async (c) => {
       displayName: display_name ?? null,
       metadata: metadataResult.value,
     })
+    .onConflictDoNothing()
     .returning();
 
-  await deliverEvent(c.get("accountId"), "inbox.created", serializeInbox(created));
-  return c.json(serializeInbox(created), 201);
+  if (result) {
+    await deliverEvent(c.get("accountId"), "inbox.created", serializeInbox(result));
+    return c.json(serializeInbox(result), 201);
+  }
+
+  const existing = await db.query.inboxes.findFirst({ where: eq(inboxes.address, address) });
+  return c.json(serializeInbox(existing!), 200);
 });
 
 router.get("/", async (c) => {
