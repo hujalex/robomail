@@ -15,8 +15,7 @@ jobs:
         run: npm install -g fern-api
 
       - name: Publish SDK
-        run: fern generate --group publish
+        run: fern generate --group publish --version ${GITHUB_REF_NAME#v}
         env:
           FERN_TOKEN: ${{ secrets.FERN_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          PACKAGE_VERSION: ${{ github.ref_name }}
