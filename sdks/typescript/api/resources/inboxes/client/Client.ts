@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as AgentmailDemoApi from "../../../index.js";
+import * as Robomail from "../../../index.js";
 
 export declare namespace InboxesClient {
     export type Options = BaseClientOptions;
@@ -25,25 +25,25 @@ export class InboxesClient {
     /**
      * Returns all inboxes for the authenticated account, newest first.
      *
-     * @param {AgentmailDemoApi.ListInboxesRequest} request
+     * @param {Robomail.ListInboxesRequest} request
      * @param {InboxesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.BadRequestError}
+     * @throws {@link Robomail.BadRequestError}
      *
      * @example
      *     await client.inboxes.listInboxes()
      */
     public listInboxes(
-        request: AgentmailDemoApi.ListInboxesRequest = {},
+        request: Robomail.ListInboxesRequest = {},
         requestOptions?: InboxesClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.InboxList> {
+    ): core.HttpResponsePromise<Robomail.InboxList> {
         return core.HttpResponsePromise.fromPromise(this.__listInboxes(request, requestOptions));
     }
 
     private async __listInboxes(
-        request: AgentmailDemoApi.ListInboxesRequest = {},
+        request: Robomail.ListInboxesRequest = {},
         requestOptions?: InboxesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.InboxList>> {
+    ): Promise<core.WithRawResponse<Robomail.InboxList>> {
         const { limit, starting_after: startingAfter, address } = request;
         const _queryParams: Record<string, unknown> = {
             limit,
@@ -60,7 +60,7 @@ export class InboxesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 "v1/inboxes",
             ),
             method: "GET",
@@ -77,18 +77,15 @@ export class InboxesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as AgentmailDemoApi.InboxList, rawResponse: _response.rawResponse };
+            return { data: _response.body as Robomail.InboxList, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new AgentmailDemoApi.BadRequestError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.BadRequestError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -102,11 +99,11 @@ export class InboxesClient {
     /**
      * Provisions a new inbox (email address) for the authenticated account.
      *
-     * @param {AgentmailDemoApi.CreateInboxRequest} request
+     * @param {Robomail.CreateInboxRequest} request
      * @param {InboxesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.BadRequestError}
-     * @throws {@link AgentmailDemoApi.ConflictError}
+     * @throws {@link Robomail.BadRequestError}
+     * @throws {@link Robomail.ConflictError}
      *
      * @example
      *     await client.inboxes.createInbox({
@@ -115,16 +112,16 @@ export class InboxesClient {
      *     })
      */
     public createInbox(
-        request: AgentmailDemoApi.CreateInboxRequest,
+        request: Robomail.CreateInboxRequest,
         requestOptions?: InboxesClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.Inbox> {
+    ): core.HttpResponsePromise<Robomail.Inbox> {
         return core.HttpResponsePromise.fromPromise(this.__createInbox(request, requestOptions));
     }
 
     private async __createInbox(
-        request: AgentmailDemoApi.CreateInboxRequest,
+        request: Robomail.CreateInboxRequest,
         requestOptions?: InboxesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.Inbox>> {
+    ): Promise<core.WithRawResponse<Robomail.Inbox>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -135,7 +132,7 @@ export class InboxesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 "v1/inboxes",
             ),
             method: "POST",
@@ -151,23 +148,17 @@ export class InboxesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as AgentmailDemoApi.Inbox, rawResponse: _response.rawResponse };
+            return { data: _response.body as Robomail.Inbox, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new AgentmailDemoApi.BadRequestError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.BadRequestError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 case 409:
-                    throw new AgentmailDemoApi.ConflictError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.ConflictError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -179,10 +170,10 @@ export class InboxesClient {
     }
 
     /**
-     * @param {AgentmailDemoApi.GetInboxRequest} request
+     * @param {Robomail.GetInboxRequest} request
      * @param {InboxesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.NotFoundError}
+     * @throws {@link Robomail.NotFoundError}
      *
      * @example
      *     await client.inboxes.getInbox({
@@ -190,16 +181,16 @@ export class InboxesClient {
      *     })
      */
     public getInbox(
-        request: AgentmailDemoApi.GetInboxRequest,
+        request: Robomail.GetInboxRequest,
         requestOptions?: InboxesClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.Inbox> {
+    ): core.HttpResponsePromise<Robomail.Inbox> {
         return core.HttpResponsePromise.fromPromise(this.__getInbox(request, requestOptions));
     }
 
     private async __getInbox(
-        request: AgentmailDemoApi.GetInboxRequest,
+        request: Robomail.GetInboxRequest,
         requestOptions?: InboxesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.Inbox>> {
+    ): Promise<core.WithRawResponse<Robomail.Inbox>> {
         const { id } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -211,7 +202,7 @@ export class InboxesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 `v1/inboxes/${core.url.encodePathParam(id)}`,
             ),
             method: "GET",
@@ -224,18 +215,15 @@ export class InboxesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as AgentmailDemoApi.Inbox, rawResponse: _response.rawResponse };
+            return { data: _response.body as Robomail.Inbox, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 404:
-                    throw new AgentmailDemoApi.NotFoundError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.NotFoundError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -249,10 +237,10 @@ export class InboxesClient {
     /**
      * Hard-deletes the inbox and stops accepting mail at that address.
      *
-     * @param {AgentmailDemoApi.DeleteInboxRequest} request
+     * @param {Robomail.DeleteInboxRequest} request
      * @param {InboxesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.NotFoundError}
+     * @throws {@link Robomail.NotFoundError}
      *
      * @example
      *     await client.inboxes.deleteInbox({
@@ -260,16 +248,16 @@ export class InboxesClient {
      *     })
      */
     public deleteInbox(
-        request: AgentmailDemoApi.DeleteInboxRequest,
+        request: Robomail.DeleteInboxRequest,
         requestOptions?: InboxesClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.DeletedResource> {
+    ): core.HttpResponsePromise<Robomail.DeletedResource> {
         return core.HttpResponsePromise.fromPromise(this.__deleteInbox(request, requestOptions));
     }
 
     private async __deleteInbox(
-        request: AgentmailDemoApi.DeleteInboxRequest,
+        request: Robomail.DeleteInboxRequest,
         requestOptions?: InboxesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.DeletedResource>> {
+    ): Promise<core.WithRawResponse<Robomail.DeletedResource>> {
         const { id } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -281,7 +269,7 @@ export class InboxesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 `v1/inboxes/${core.url.encodePathParam(id)}`,
             ),
             method: "DELETE",
@@ -294,18 +282,15 @@ export class InboxesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as AgentmailDemoApi.DeletedResource, rawResponse: _response.rawResponse };
+            return { data: _response.body as Robomail.DeletedResource, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 404:
-                    throw new AgentmailDemoApi.NotFoundError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.NotFoundError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -319,11 +304,11 @@ export class InboxesClient {
     /**
      * Update display_name or metadata. Address is immutable.
      *
-     * @param {AgentmailDemoApi.UpdateInboxRequest} request
+     * @param {Robomail.UpdateInboxRequest} request
      * @param {InboxesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.BadRequestError}
-     * @throws {@link AgentmailDemoApi.NotFoundError}
+     * @throws {@link Robomail.BadRequestError}
+     * @throws {@link Robomail.NotFoundError}
      *
      * @example
      *     await client.inboxes.updateInbox({
@@ -331,16 +316,16 @@ export class InboxesClient {
      *     })
      */
     public updateInbox(
-        request: AgentmailDemoApi.UpdateInboxRequest,
+        request: Robomail.UpdateInboxRequest,
         requestOptions?: InboxesClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.Inbox> {
+    ): core.HttpResponsePromise<Robomail.Inbox> {
         return core.HttpResponsePromise.fromPromise(this.__updateInbox(request, requestOptions));
     }
 
     private async __updateInbox(
-        request: AgentmailDemoApi.UpdateInboxRequest,
+        request: Robomail.UpdateInboxRequest,
         requestOptions?: InboxesClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.Inbox>> {
+    ): Promise<core.WithRawResponse<Robomail.Inbox>> {
         const { id, ..._body } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -352,7 +337,7 @@ export class InboxesClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 `v1/inboxes/${core.url.encodePathParam(id)}`,
             ),
             method: "PATCH",
@@ -368,23 +353,17 @@ export class InboxesClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as AgentmailDemoApi.Inbox, rawResponse: _response.rawResponse };
+            return { data: _response.body as Robomail.Inbox, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new AgentmailDemoApi.BadRequestError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.BadRequestError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 case 404:
-                    throw new AgentmailDemoApi.NotFoundError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.NotFoundError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

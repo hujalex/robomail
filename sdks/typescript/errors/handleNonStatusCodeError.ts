@@ -11,28 +11,28 @@ export function handleNonStatusCodeError(
 ): never {
     switch (error.reason) {
         case "non-json":
-            throw new errors.AgentmailDemoApiError({
+            throw new errors.RobomailError({
                 statusCode: error.statusCode,
                 body: error.rawBody,
                 rawResponse: rawResponse,
             });
         case "body-is-null":
-            throw new errors.AgentmailDemoApiError({
+            throw new errors.RobomailError({
                 statusCode: error.statusCode,
                 rawResponse: rawResponse,
             });
         case "timeout":
-            throw new errors.AgentmailDemoApiTimeoutError(`Timeout exceeded when calling ${method} ${path}.`, {
+            throw new errors.RobomailTimeoutError(`Timeout exceeded when calling ${method} ${path}.`, {
                 cause: error.cause,
             });
         case "unknown":
-            throw new errors.AgentmailDemoApiError({
+            throw new errors.RobomailError({
                 message: error.errorMessage,
                 rawResponse: rawResponse,
                 cause: error.cause,
             });
         default:
-            throw new errors.AgentmailDemoApiError({
+            throw new errors.RobomailError({
                 message: "Unknown error",
                 rawResponse: rawResponse,
             });

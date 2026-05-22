@@ -16,7 +16,7 @@ export const buildAddress = (username: string, domain: string): string =>
 
 export const extractDomain = (address: string): string => {
   const [, domain] = normalizeEmail(address).split("@");
-  return domain ?? "agentmail.local";
+  return domain ?? "robomail.local";
 };
 
 export const generateMessageId = (domain: string): string =>

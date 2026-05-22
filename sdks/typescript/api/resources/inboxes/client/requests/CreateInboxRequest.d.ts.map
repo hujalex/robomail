@@ -1,1 +1,0 @@
-{"version":3,"file":"CreateInboxRequest.d.ts","sourceRoot":"","sources":["CreateInboxRequest.ts"],"names":[],"mappings":"AAEA;;;;;;GAMG;AACH,MAAM,WAAW,kBAAkB;IAC/B,uCAAuC;IACvC,QAAQ,EAAE,MAAM,CAAC;IACjB,4BAA4B;IAC5B,MAAM,EAAE,MAAM,CAAC;IACf,YAAY,CAAC,EAAE,MAAM,GAAG,IAAI,CAAC;IAC7B,QAAQ,CAAC,EAAE,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,CAAC;CACtC"}

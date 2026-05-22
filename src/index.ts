@@ -11,7 +11,7 @@ import internalWebhooksRouter from "./routes/internalWebhooks.js";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
-app.get("/", (c) => c.text("AgentMail API. See SPEC.md for available endpoints."));
+app.get("/", (c) => c.text("RoboMail API. See SPEC.md for available endpoints."));
 
 app.get("/health", (c) =>
   c.json({

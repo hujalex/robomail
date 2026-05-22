@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as AgentmailDemoApi from "../../../index.js";
+import * as Robomail from "../../../index.js";
 
 export declare namespace ThreadsClient {
     export type Options = BaseClientOptions;
@@ -25,11 +25,11 @@ export class ThreadsClient {
     /**
      * Returns threads for a given inbox, ordered by most recent activity.
      *
-     * @param {AgentmailDemoApi.ListThreadsRequest} request
+     * @param {Robomail.ListThreadsRequest} request
      * @param {ThreadsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.BadRequestError}
-     * @throws {@link AgentmailDemoApi.NotFoundError}
+     * @throws {@link Robomail.BadRequestError}
+     * @throws {@link Robomail.NotFoundError}
      *
      * @example
      *     await client.threads.listThreads({
@@ -37,16 +37,16 @@ export class ThreadsClient {
      *     })
      */
     public listThreads(
-        request: AgentmailDemoApi.ListThreadsRequest,
+        request: Robomail.ListThreadsRequest,
         requestOptions?: ThreadsClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.ThreadList> {
+    ): core.HttpResponsePromise<Robomail.ThreadList> {
         return core.HttpResponsePromise.fromPromise(this.__listThreads(request, requestOptions));
     }
 
     private async __listThreads(
-        request: AgentmailDemoApi.ListThreadsRequest,
+        request: Robomail.ListThreadsRequest,
         requestOptions?: ThreadsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.ThreadList>> {
+    ): Promise<core.WithRawResponse<Robomail.ThreadList>> {
         const { inbox_email_address: inboxEmailAddress, limit, starting_after: startingAfter, participant } = request;
         const _queryParams: Record<string, unknown> = {
             inbox_email_address: inboxEmailAddress,
@@ -64,7 +64,7 @@ export class ThreadsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 "v1/threads",
             ),
             method: "GET",
@@ -81,23 +81,17 @@ export class ThreadsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as AgentmailDemoApi.ThreadList, rawResponse: _response.rawResponse };
+            return { data: _response.body as Robomail.ThreadList, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new AgentmailDemoApi.BadRequestError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.BadRequestError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 case 404:
-                    throw new AgentmailDemoApi.NotFoundError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.NotFoundError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -111,10 +105,10 @@ export class ThreadsClient {
     /**
      * Retrieve a thread with all its messages.
      *
-     * @param {AgentmailDemoApi.GetThreadRequest} request
+     * @param {Robomail.GetThreadRequest} request
      * @param {ThreadsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.NotFoundError}
+     * @throws {@link Robomail.NotFoundError}
      *
      * @example
      *     await client.threads.getThread({
@@ -122,16 +116,16 @@ export class ThreadsClient {
      *     })
      */
     public getThread(
-        request: AgentmailDemoApi.GetThreadRequest,
+        request: Robomail.GetThreadRequest,
         requestOptions?: ThreadsClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.Thread> {
+    ): core.HttpResponsePromise<Robomail.Thread> {
         return core.HttpResponsePromise.fromPromise(this.__getThread(request, requestOptions));
     }
 
     private async __getThread(
-        request: AgentmailDemoApi.GetThreadRequest,
+        request: Robomail.GetThreadRequest,
         requestOptions?: ThreadsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.Thread>> {
+    ): Promise<core.WithRawResponse<Robomail.Thread>> {
         const { id } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -143,7 +137,7 @@ export class ThreadsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 `v1/threads/${core.url.encodePathParam(id)}`,
             ),
             method: "GET",
@@ -156,18 +150,15 @@ export class ThreadsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as AgentmailDemoApi.Thread, rawResponse: _response.rawResponse };
+            return { data: _response.body as Robomail.Thread, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 404:
-                    throw new AgentmailDemoApi.NotFoundError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.NotFoundError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -181,11 +172,11 @@ export class ThreadsClient {
     /**
      * Performs vector similarity search across thread messages using pgvector embeddings (Xenova/all-MiniLM-L6-v2). Requires embeddings to be enabled.
      *
-     * @param {AgentmailDemoApi.SearchThreadsRequest} request
+     * @param {Robomail.SearchThreadsRequest} request
      * @param {ThreadsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.BadRequestError}
-     * @throws {@link AgentmailDemoApi.NotFoundError}
+     * @throws {@link Robomail.BadRequestError}
+     * @throws {@link Robomail.NotFoundError}
      *
      * @example
      *     await client.threads.searchThreads({
@@ -193,16 +184,16 @@ export class ThreadsClient {
      *     })
      */
     public searchThreads(
-        request: AgentmailDemoApi.SearchThreadsRequest,
+        request: Robomail.SearchThreadsRequest,
         requestOptions?: ThreadsClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.ThreadSearchList> {
+    ): core.HttpResponsePromise<Robomail.ThreadSearchList> {
         return core.HttpResponsePromise.fromPromise(this.__searchThreads(request, requestOptions));
     }
 
     private async __searchThreads(
-        request: AgentmailDemoApi.SearchThreadsRequest,
+        request: Robomail.SearchThreadsRequest,
         requestOptions?: ThreadsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.ThreadSearchList>> {
+    ): Promise<core.WithRawResponse<Robomail.ThreadSearchList>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -213,7 +204,7 @@ export class ThreadsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 "v1/threads/search",
             ),
             method: "POST",
@@ -229,23 +220,17 @@ export class ThreadsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as AgentmailDemoApi.ThreadSearchList, rawResponse: _response.rawResponse };
+            return { data: _response.body as Robomail.ThreadSearchList, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new AgentmailDemoApi.BadRequestError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.BadRequestError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 case 404:
-                    throw new AgentmailDemoApi.NotFoundError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.NotFoundError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

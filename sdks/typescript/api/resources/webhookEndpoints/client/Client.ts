@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as AgentmailDemoApi from "../../../index.js";
+import * as Robomail from "../../../index.js";
 
 export declare namespace WebhookEndpointsClient {
     export type Options = BaseClientOptions;
@@ -30,13 +30,13 @@ export class WebhookEndpointsClient {
      */
     public listWebhookEndpoints(
         requestOptions?: WebhookEndpointsClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.WebhookEndpointList> {
+    ): core.HttpResponsePromise<Robomail.WebhookEndpointList> {
         return core.HttpResponsePromise.fromPromise(this.__listWebhookEndpoints(requestOptions));
     }
 
     private async __listWebhookEndpoints(
         requestOptions?: WebhookEndpointsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.WebhookEndpointList>> {
+    ): Promise<core.WithRawResponse<Robomail.WebhookEndpointList>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -47,7 +47,7 @@ export class WebhookEndpointsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 "v1/webhook_endpoints",
             ),
             method: "GET",
@@ -60,11 +60,11 @@ export class WebhookEndpointsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as AgentmailDemoApi.WebhookEndpointList, rawResponse: _response.rawResponse };
+            return { data: _response.body as Robomail.WebhookEndpointList, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
-            throw new errors.AgentmailDemoApiError({
+            throw new errors.RobomailError({
                 statusCode: _response.error.statusCode,
                 body: _response.error.body,
                 rawResponse: _response.rawResponse,
@@ -77,10 +77,10 @@ export class WebhookEndpointsClient {
     /**
      * Register a URL to receive event deliveries. The signing_secret is returned only on creation — store it securely.
      *
-     * @param {AgentmailDemoApi.CreateWebhookEndpointRequest} request
+     * @param {Robomail.CreateWebhookEndpointRequest} request
      * @param {WebhookEndpointsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.BadRequestError}
+     * @throws {@link Robomail.BadRequestError}
      *
      * @example
      *     await client.webhookEndpoints.createWebhookEndpoint({
@@ -88,16 +88,16 @@ export class WebhookEndpointsClient {
      *     })
      */
     public createWebhookEndpoint(
-        request: AgentmailDemoApi.CreateWebhookEndpointRequest,
+        request: Robomail.CreateWebhookEndpointRequest,
         requestOptions?: WebhookEndpointsClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.WebhookEndpointWithSecret> {
+    ): core.HttpResponsePromise<Robomail.WebhookEndpointWithSecret> {
         return core.HttpResponsePromise.fromPromise(this.__createWebhookEndpoint(request, requestOptions));
     }
 
     private async __createWebhookEndpoint(
-        request: AgentmailDemoApi.CreateWebhookEndpointRequest,
+        request: Robomail.CreateWebhookEndpointRequest,
         requestOptions?: WebhookEndpointsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.WebhookEndpointWithSecret>> {
+    ): Promise<core.WithRawResponse<Robomail.WebhookEndpointWithSecret>> {
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -108,7 +108,7 @@ export class WebhookEndpointsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 "v1/webhook_endpoints",
             ),
             method: "POST",
@@ -124,21 +124,15 @@ export class WebhookEndpointsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return {
-                data: _response.body as AgentmailDemoApi.WebhookEndpointWithSecret,
-                rawResponse: _response.rawResponse,
-            };
+            return { data: _response.body as Robomail.WebhookEndpointWithSecret, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new AgentmailDemoApi.BadRequestError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.BadRequestError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -152,10 +146,10 @@ export class WebhookEndpointsClient {
     /**
      * Returns the endpoint. signing_secret is NOT included.
      *
-     * @param {AgentmailDemoApi.GetWebhookEndpointRequest} request
+     * @param {Robomail.GetWebhookEndpointRequest} request
      * @param {WebhookEndpointsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.NotFoundError}
+     * @throws {@link Robomail.NotFoundError}
      *
      * @example
      *     await client.webhookEndpoints.getWebhookEndpoint({
@@ -163,16 +157,16 @@ export class WebhookEndpointsClient {
      *     })
      */
     public getWebhookEndpoint(
-        request: AgentmailDemoApi.GetWebhookEndpointRequest,
+        request: Robomail.GetWebhookEndpointRequest,
         requestOptions?: WebhookEndpointsClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.WebhookEndpoint> {
+    ): core.HttpResponsePromise<Robomail.WebhookEndpoint> {
         return core.HttpResponsePromise.fromPromise(this.__getWebhookEndpoint(request, requestOptions));
     }
 
     private async __getWebhookEndpoint(
-        request: AgentmailDemoApi.GetWebhookEndpointRequest,
+        request: Robomail.GetWebhookEndpointRequest,
         requestOptions?: WebhookEndpointsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.WebhookEndpoint>> {
+    ): Promise<core.WithRawResponse<Robomail.WebhookEndpoint>> {
         const { id } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -184,7 +178,7 @@ export class WebhookEndpointsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 `v1/webhook_endpoints/${core.url.encodePathParam(id)}`,
             ),
             method: "GET",
@@ -197,18 +191,15 @@ export class WebhookEndpointsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as AgentmailDemoApi.WebhookEndpoint, rawResponse: _response.rawResponse };
+            return { data: _response.body as Robomail.WebhookEndpoint, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 404:
-                    throw new AgentmailDemoApi.NotFoundError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.NotFoundError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -220,10 +211,10 @@ export class WebhookEndpointsClient {
     }
 
     /**
-     * @param {AgentmailDemoApi.DeleteWebhookEndpointRequest} request
+     * @param {Robomail.DeleteWebhookEndpointRequest} request
      * @param {WebhookEndpointsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.NotFoundError}
+     * @throws {@link Robomail.NotFoundError}
      *
      * @example
      *     await client.webhookEndpoints.deleteWebhookEndpoint({
@@ -231,16 +222,16 @@ export class WebhookEndpointsClient {
      *     })
      */
     public deleteWebhookEndpoint(
-        request: AgentmailDemoApi.DeleteWebhookEndpointRequest,
+        request: Robomail.DeleteWebhookEndpointRequest,
         requestOptions?: WebhookEndpointsClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.DeletedResource> {
+    ): core.HttpResponsePromise<Robomail.DeletedResource> {
         return core.HttpResponsePromise.fromPromise(this.__deleteWebhookEndpoint(request, requestOptions));
     }
 
     private async __deleteWebhookEndpoint(
-        request: AgentmailDemoApi.DeleteWebhookEndpointRequest,
+        request: Robomail.DeleteWebhookEndpointRequest,
         requestOptions?: WebhookEndpointsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.DeletedResource>> {
+    ): Promise<core.WithRawResponse<Robomail.DeletedResource>> {
         const { id } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -252,7 +243,7 @@ export class WebhookEndpointsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 `v1/webhook_endpoints/${core.url.encodePathParam(id)}`,
             ),
             method: "DELETE",
@@ -265,18 +256,15 @@ export class WebhookEndpointsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as AgentmailDemoApi.DeletedResource, rawResponse: _response.rawResponse };
+            return { data: _response.body as Robomail.DeletedResource, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 404:
-                    throw new AgentmailDemoApi.NotFoundError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.NotFoundError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -288,11 +276,11 @@ export class WebhookEndpointsClient {
     }
 
     /**
-     * @param {AgentmailDemoApi.UpdateWebhookEndpointRequest} request
+     * @param {Robomail.UpdateWebhookEndpointRequest} request
      * @param {WebhookEndpointsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.BadRequestError}
-     * @throws {@link AgentmailDemoApi.NotFoundError}
+     * @throws {@link Robomail.BadRequestError}
+     * @throws {@link Robomail.NotFoundError}
      *
      * @example
      *     await client.webhookEndpoints.updateWebhookEndpoint({
@@ -300,16 +288,16 @@ export class WebhookEndpointsClient {
      *     })
      */
     public updateWebhookEndpoint(
-        request: AgentmailDemoApi.UpdateWebhookEndpointRequest,
+        request: Robomail.UpdateWebhookEndpointRequest,
         requestOptions?: WebhookEndpointsClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.WebhookEndpoint> {
+    ): core.HttpResponsePromise<Robomail.WebhookEndpoint> {
         return core.HttpResponsePromise.fromPromise(this.__updateWebhookEndpoint(request, requestOptions));
     }
 
     private async __updateWebhookEndpoint(
-        request: AgentmailDemoApi.UpdateWebhookEndpointRequest,
+        request: Robomail.UpdateWebhookEndpointRequest,
         requestOptions?: WebhookEndpointsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.WebhookEndpoint>> {
+    ): Promise<core.WithRawResponse<Robomail.WebhookEndpoint>> {
         const { id, ..._body } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -321,7 +309,7 @@ export class WebhookEndpointsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 `v1/webhook_endpoints/${core.url.encodePathParam(id)}`,
             ),
             method: "PATCH",
@@ -337,23 +325,17 @@ export class WebhookEndpointsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return { data: _response.body as AgentmailDemoApi.WebhookEndpoint, rawResponse: _response.rawResponse };
+            return { data: _response.body as Robomail.WebhookEndpoint, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new AgentmailDemoApi.BadRequestError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.BadRequestError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 case 404:
-                    throw new AgentmailDemoApi.NotFoundError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.NotFoundError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -367,10 +349,10 @@ export class WebhookEndpointsClient {
     /**
      * Generates a new signing secret. Returns the new value once — store it immediately.
      *
-     * @param {AgentmailDemoApi.RotateWebhookSecretRequest} request
+     * @param {Robomail.RotateWebhookSecretRequest} request
      * @param {WebhookEndpointsClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.NotFoundError}
+     * @throws {@link Robomail.NotFoundError}
      *
      * @example
      *     await client.webhookEndpoints.rotateWebhookSecret({
@@ -378,16 +360,16 @@ export class WebhookEndpointsClient {
      *     })
      */
     public rotateWebhookSecret(
-        request: AgentmailDemoApi.RotateWebhookSecretRequest,
+        request: Robomail.RotateWebhookSecretRequest,
         requestOptions?: WebhookEndpointsClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.RotateWebhookSecretResponse> {
+    ): core.HttpResponsePromise<Robomail.RotateWebhookSecretResponse> {
         return core.HttpResponsePromise.fromPromise(this.__rotateWebhookSecret(request, requestOptions));
     }
 
     private async __rotateWebhookSecret(
-        request: AgentmailDemoApi.RotateWebhookSecretRequest,
+        request: Robomail.RotateWebhookSecretRequest,
         requestOptions?: WebhookEndpointsClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.RotateWebhookSecretResponse>> {
+    ): Promise<core.WithRawResponse<Robomail.RotateWebhookSecretResponse>> {
         const { id } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
@@ -399,7 +381,7 @@ export class WebhookEndpointsClient {
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 `v1/webhook_endpoints/${core.url.encodePathParam(id)}/rotate_secret`,
             ),
             method: "POST",
@@ -412,21 +394,15 @@ export class WebhookEndpointsClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return {
-                data: _response.body as AgentmailDemoApi.RotateWebhookSecretResponse,
-                rawResponse: _response.rawResponse,
-            };
+            return { data: _response.body as Robomail.RotateWebhookSecretResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 404:
-                    throw new AgentmailDemoApi.NotFoundError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.NotFoundError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

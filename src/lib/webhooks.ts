@@ -69,10 +69,10 @@ export const deliverEvent = async (
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-AgentMail-Signature": signature,
-              "X-AgentMail-Event-Id": payload.id,
-              "X-AgentMail-Event-Type": payload.type,
-              "X-AgentMail-Delivery-Attempt": "1",
+              "X-RoboMail-Signature": signature,
+              "X-RoboMail-Event-Id": payload.id,
+              "X-RoboMail-Event-Type": payload.type,
+              "X-RoboMail-Delivery-Attempt": "1",
             },
             body,
           });

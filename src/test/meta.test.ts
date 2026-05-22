@@ -34,7 +34,7 @@ describe("GET /", () => {
   it("returns welcome text", async () => {
     const res = await app.request("/");
     expect(res.status).toBe(200);
-    expect(await res.text()).toContain("AgentMail");
+    expect(await res.text()).toContain("RoboMail");
   });
 });
 

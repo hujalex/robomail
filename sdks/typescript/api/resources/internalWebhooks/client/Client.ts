@@ -7,7 +7,7 @@ import * as core from "../../../../core/index.js";
 import * as environments from "../../../../environments.js";
 import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCodeError.js";
 import * as errors from "../../../../errors/index.js";
-import * as AgentmailDemoApi from "../../../index.js";
+import * as Robomail from "../../../index.js";
 
 export declare namespace InternalWebhooksClient {
     export type Options = BaseClientOptions;
@@ -28,8 +28,8 @@ export class InternalWebhooksClient {
      * @param {Record<string, unknown>} request
      * @param {InternalWebhooksClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.BadRequestError}
-     * @throws {@link AgentmailDemoApi.UnauthorizedError}
+     * @throws {@link Robomail.BadRequestError}
+     * @throws {@link Robomail.UnauthorizedError}
      *
      * @example
      *     await client.internalWebhooks.receiveInboundMail({
@@ -39,20 +39,20 @@ export class InternalWebhooksClient {
     public receiveInboundMail(
         request: Record<string, unknown>,
         requestOptions?: InternalWebhooksClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.ReceiveInboundMailResponse> {
+    ): core.HttpResponsePromise<Robomail.ReceiveInboundMailResponse> {
         return core.HttpResponsePromise.fromPromise(this.__receiveInboundMail(request, requestOptions));
     }
 
     private async __receiveInboundMail(
         request: Record<string, unknown>,
         requestOptions?: InternalWebhooksClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.ReceiveInboundMailResponse>> {
+    ): Promise<core.WithRawResponse<Robomail.ReceiveInboundMailResponse>> {
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(this._options?.headers, requestOptions?.headers);
         const _response = await core.fetcher({
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 "webhooks/inbound",
             ),
             method: "POST",
@@ -68,26 +68,20 @@ export class InternalWebhooksClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return {
-                data: _response.body as AgentmailDemoApi.ReceiveInboundMailResponse,
-                rawResponse: _response.rawResponse,
-            };
+            return { data: _response.body as Robomail.ReceiveInboundMailResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new AgentmailDemoApi.BadRequestError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.BadRequestError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 case 401:
-                    throw new AgentmailDemoApi.UnauthorizedError(
-                        _response.error.body as AgentmailDemoApi.Error_,
+                    throw new Robomail.UnauthorizedError(
+                        _response.error.body as Robomail.Error_,
                         _response.rawResponse,
                     );
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,
@@ -104,9 +98,9 @@ export class InternalWebhooksClient {
      * @param {Record<string, unknown>} request
      * @param {InternalWebhooksClient.RequestOptions} requestOptions - Request-specific configuration.
      *
-     * @throws {@link AgentmailDemoApi.BadRequestError}
-     * @throws {@link AgentmailDemoApi.UnauthorizedError}
-     * @throws {@link AgentmailDemoApi.NotFoundError}
+     * @throws {@link Robomail.BadRequestError}
+     * @throws {@link Robomail.UnauthorizedError}
+     * @throws {@link Robomail.NotFoundError}
      *
      * @example
      *     await client.internalWebhooks.receiveOutboundStatus({
@@ -116,20 +110,20 @@ export class InternalWebhooksClient {
     public receiveOutboundStatus(
         request: Record<string, unknown>,
         requestOptions?: InternalWebhooksClient.RequestOptions,
-    ): core.HttpResponsePromise<AgentmailDemoApi.ReceiveOutboundStatusResponse> {
+    ): core.HttpResponsePromise<Robomail.ReceiveOutboundStatusResponse> {
         return core.HttpResponsePromise.fromPromise(this.__receiveOutboundStatus(request, requestOptions));
     }
 
     private async __receiveOutboundStatus(
         request: Record<string, unknown>,
         requestOptions?: InternalWebhooksClient.RequestOptions,
-    ): Promise<core.WithRawResponse<AgentmailDemoApi.ReceiveOutboundStatusResponse>> {
+    ): Promise<core.WithRawResponse<Robomail.ReceiveOutboundStatusResponse>> {
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(this._options?.headers, requestOptions?.headers);
         const _response = await core.fetcher({
             url: core.url.join(
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
-                    environments.AgentmailDemoApiEnvironment.Production,
+                    environments.RobomailEnvironment.Production,
                 "webhooks/outbound-status",
             ),
             method: "POST",
@@ -146,7 +140,7 @@ export class InternalWebhooksClient {
         });
         if (_response.ok) {
             return {
-                data: _response.body as AgentmailDemoApi.ReceiveOutboundStatusResponse,
+                data: _response.body as Robomail.ReceiveOutboundStatusResponse,
                 rawResponse: _response.rawResponse,
             };
         }
@@ -154,22 +148,16 @@ export class InternalWebhooksClient {
         if (_response.error.reason === "status-code") {
             switch (_response.error.statusCode) {
                 case 400:
-                    throw new AgentmailDemoApi.BadRequestError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.BadRequestError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 case 401:
-                    throw new AgentmailDemoApi.UnauthorizedError(
-                        _response.error.body as AgentmailDemoApi.Error_,
+                    throw new Robomail.UnauthorizedError(
+                        _response.error.body as Robomail.Error_,
                         _response.rawResponse,
                     );
                 case 404:
-                    throw new AgentmailDemoApi.NotFoundError(
-                        _response.error.body as AgentmailDemoApi.Error_,
-                        _response.rawResponse,
-                    );
+                    throw new Robomail.NotFoundError(_response.error.body as Robomail.Error_, _response.rawResponse);
                 default:
-                    throw new errors.AgentmailDemoApiError({
+                    throw new errors.RobomailError({
                         statusCode: _response.error.statusCode,
                         body: _response.error.body,
                         rawResponse: _response.rawResponse,

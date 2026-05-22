@@ -1,2 +1,2 @@
-export { AgentmailDemoApiError } from "./AgentmailDemoApiError.js";
-export { AgentmailDemoApiTimeoutError } from "./AgentmailDemoApiTimeoutError.js";
+export { RobomailError } from "./RobomailError.js";
+export { RobomailTimeoutError } from "./RobomailTimeoutError.js";

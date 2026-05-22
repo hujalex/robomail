@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
-  title: AgentMail API
+  title: RoboMail API
   version: 1.0.0
   description: >
     API for giving AI agents their own email inboxes — send, receive, and
     manage threaded conversations programmatically.
-  x-organization: agentmail-demo
+  x-organization: robo-mail
 
 servers:
   - url: https://agentmail-demo.vercel.app
@@ -47,7 +47,21 @@ components:
 
     Message:
       type: object
-      required: [id, thread_id, inbox_email_address, direction, message_id_header, from, to, cc, bcc, headers, status, created_at]
+      required:
+        [
+          id,
+          thread_id,
+          inbox_email_address,
+          direction,
+          message_id_header,
+          from,
+          to,
+          cc,
+          bcc,
+          headers,
+          status,
+          created_at,
+        ]
       properties:
         id:
           type: string
@@ -103,7 +117,8 @@ components:
 
     Thread:
       type: object
-      required: [id, inbox_email_address, root_message_id_header, created_at, messages]
+      required:
+        [id, inbox_email_address, root_message_id_header, created_at, messages]
       properties:
         id:
           type: string
@@ -1009,7 +1024,7 @@ paths:
       description: >
         Internal endpoint called by the inbound mail provider (e.g. CloudMailin)
         when external mail arrives at one of your inboxes. Verified via HMAC
-        signature in the X-AgentMail-Signature header.
+        signature in the X-RoboMail-Signature header.
       security: []
       tags: [Internal Webhooks]
       requestBody:

@@ -23,7 +23,7 @@ export class BearerAuthProvider implements core.AuthProvider {
     } = {}): Promise<core.AuthRequest> {
         const token = await core.Supplier.get(this.options[TOKEN_PARAM]);
         if (token == null) {
-            throw new errors.AgentmailDemoApiError({
+            throw new errors.RobomailError({
                 message: BearerAuthProvider.AUTH_CONFIG_ERROR_MESSAGE,
             });
         }

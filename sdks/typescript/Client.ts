@@ -10,14 +10,14 @@ import type { BaseClientOptions, BaseRequestOptions } from "./BaseClient.js";
 import { type NormalizedClientOptionsWithAuth, normalizeClientOptionsWithAuth } from "./BaseClient.js";
 import * as core from "./core/index.js";
 
-export declare namespace AgentmailDemoApiClient {
+export declare namespace RobomailClient {
     export type Options = BaseClientOptions;
 
     export interface RequestOptions extends BaseRequestOptions {}
 }
 
-export class AgentmailDemoApiClient {
-    protected readonly _options: NormalizedClientOptionsWithAuth<AgentmailDemoApiClient.Options>;
+export class RobomailClient {
+    protected readonly _options: NormalizedClientOptionsWithAuth<RobomailClient.Options>;
     protected _meta: MetaClient | undefined;
     protected _inboxes: InboxesClient | undefined;
     protected _threads: ThreadsClient | undefined;
@@ -25,7 +25,7 @@ export class AgentmailDemoApiClient {
     protected _webhookEndpoints: WebhookEndpointsClient | undefined;
     protected _internalWebhooks: InternalWebhooksClient | undefined;
 
-    constructor(options: AgentmailDemoApiClient.Options = {}) {
+    constructor(options: RobomailClient.Options = {}) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
