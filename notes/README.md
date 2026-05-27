@@ -28,3 +28,6 @@ Receiving Emails
 
 
 If no domain is provided set the domain to connectmecybersecurity.org
+
+Seems like threads, messages are only recorded for email addresses with a valid inbox
+sendMessage from the sdk currently doesn't throw an error for an uinitialized inbox
