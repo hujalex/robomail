@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { Hono } from "hono";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { webhookEndpoints } from "../db/schema.js";
+import { webhookEndpoints, inboxes } from "../db/schema.js";
 import type { AuthVariables } from "../lib/auth.js";
 import { readJson, requireString, parseStringArray } from "../lib/parsers.js";
 
@@ -10,6 +10,7 @@ const router = new Hono<{ Variables: AuthVariables }>();
 
 const serializeEndpoint = (endpoint: typeof webhookEndpoints.$inferSelect) => ({
   id: endpoint.id,
+  inbox_id: endpoint.inboxId,
   url: endpoint.url,
   description: endpoint.description,
   subscribed_events: endpoint.subscribedEvents,
@@ -20,6 +21,7 @@ const serializeEndpoint = (endpoint: typeof webhookEndpoints.$inferSelect) => ({
 router.post("/", async (c) => {
   const bodyResult = await readJson<{
     url?: unknown;
+    inbox_id?: unknown;
     description?: unknown;
     subscribed_events?: unknown;
   }>(c);
@@ -44,6 +46,16 @@ router.post("/", async (c) => {
     return c.json({ error: "description must be a string" }, 400);
   }
 
+  let inboxId: string | null = null;
+  if (bodyResult.value.inbox_id !== undefined && bodyResult.value.inbox_id !== null) {
+    if (typeof bodyResult.value.inbox_id !== "string") return c.json({ error: "inbox_id must be a string" }, 400);
+    const inbox = await db.query.inboxes.findFirst({
+      where: and(eq(inboxes.id, bodyResult.value.inbox_id), eq(inboxes.accountId, c.get("accountId"))),
+    });
+    if (!inbox) return c.json({ error: "Inbox not found" }, 404);
+    inboxId = inbox.id;
+  }
+
   const subscribedResult = parseStringArray(bodyResult.value.subscribed_events, "subscribed_events");
   if (!subscribedResult.ok) return c.json({ error: subscribedResult.error }, 400);
 
@@ -52,6 +64,7 @@ router.post("/", async (c) => {
     .insert(webhookEndpoints)
     .values({
       accountId: c.get("accountId"),
+      inboxId,
       url: bodyResult.value.url as string,
       description: bodyResult.value.description ?? null,
       subscribedEvents: subscribedResult.value.length ? subscribedResult.value : null,

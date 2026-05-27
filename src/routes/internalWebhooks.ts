@@ -185,9 +185,9 @@ router.post("/inbound", async (c) => {
   await db.update(threads).set({ lastMessageAt: new Date() }).where(eq(threads.id, threadId));
 
   if (threadCreated && threadRecord) {
-    await deliverEvent(inbox.accountId, "thread.created", serializeThread(threadRecord, [createdMessage]));
+    await deliverEvent(inbox.accountId, inbox.id, "thread.created", serializeThread(threadRecord, [createdMessage]));
   }
-  await deliverEvent(inbox.accountId, "message.received", serializeMessage(createdMessage));
+  await deliverEvent(inbox.accountId, inbox.id, "message.received", serializeMessage(createdMessage));
 
   return c.json({ received: true });
 });
@@ -243,6 +243,7 @@ router.post("/outbound-status", async (c) => {
 
   await deliverEvent(
     updated.accountId,
+    updated.inboxId,
     normalizedStatus === "delivered" ? "message.delivered" : "message.bounced",
     serializeMessage(updated),
   );

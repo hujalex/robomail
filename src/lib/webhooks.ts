@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { webhookEndpoints } from "../db/schema.js";
 import { hmacSha256, timingSafeEqual } from "./crypto.js";
@@ -39,11 +39,16 @@ const shouldDeliver = (
 
 export const deliverEvent = async (
   accountId: string,
+  inboxId: string,
   eventType: string,
   data: unknown,
 ): Promise<void> => {
   const endpoints = await db.query.webhookEndpoints.findMany({
-    where: and(eq(webhookEndpoints.accountId, accountId), eq(webhookEndpoints.isEnabled, true)),
+    where: and(
+      eq(webhookEndpoints.accountId, accountId),
+      eq(webhookEndpoints.isEnabled, true),
+      or(isNull(webhookEndpoints.inboxId), eq(webhookEndpoints.inboxId, inboxId)),
+    ),
   });
 
   if (endpoints.length === 0) {

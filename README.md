@@ -1,6 +1,6 @@
 # Robomail
 
-Programmatic email infrastructure for agents. Create inboxes, send messages, and manage threads via a simple HTTP API.
+Programmatic email infra for agents. Create inboxes, send messages, and manage threads via a simple HTTP API.
 
 ## Installation
 ```
@@ -40,6 +40,13 @@ await client.messages.sendMessage({
 const { threads } = await client.threads.listThreads({
   inbox_email_address: "agent@example.org",
 });
+
+// Register a webhook to receive incoming message events
+const endpoint = await client.webhooks.createWebhookEndpoint({
+  url: "https://myapp.example.com/webhooks/robomail",
+  subscribed_events: ["message.received"],
+});
+// Store endpoint.signing_secret — used to verify incoming requests
 ```
 
 ## Caveat
@@ -126,7 +133,22 @@ We leverage NeonDB to store information including registered accounts, their cor
 - `created_at` — TIMESTAMPTZ NOT NULL DEFAULT now() -->
 
 ## Sending and Receiving Emails
-We take advantage of the Resend Email API to send outbound emails in addition to processing incoming emails. Resend very cleanly manages sending outbound emails. As for inbound emails, when an email address with a configured domain receives an email. Receiving an email triggers Resend makes a post request to our API Server with critical information stored in the POST request payload enabling our API Server to process the message as needed.
+Resend provides a practical and convenient service to enable RoboMail to send outbound emails. As for inbound emails, when an email address with a configured domain receives an email, Resend makes a POST request to our API server with the message payload, enabling us to process and store it. Resend also sends delivery status callbacks (`email.delivered`, `email.bounced`) for outbound messages, which update the message status in the database. 
+
+## Webhooks
+
+Register an HTTPS endpoint to receive real-time event notifications. Supported events are `thread.created`, `message.received`, `message.delivered`, and `message.bounced`. Endpoints can be scoped to a specific inbox with `inbox_id` and filtered to a subset of events with `subscribed_events`.
+
+```ts
+// Register an endpoint
+const endpoint = await client.webhooks.createWebhookEndpoint({
+  url: "https://myapp.example.com/webhooks/robomail",
+  inbox_id: "agent@example.org",                          // optional: scope to one inbox
+  subscribed_events: ["message.received", "thread.created"], // optional: defaults to all
+});
+const signingSecret = endpoint.signing_secret; // store securely — only returned once
+
+```
 
 ## SDK releases
 

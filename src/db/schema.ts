@@ -225,6 +225,8 @@ export const webhookEndpoints = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
+    inboxId: text("inbox_id")
+      .references(() => inboxes.id, { onDelete: "cascade" }),
     url: text("url").notNull(),
     description: text("description"),
     subscribedEvents: text("subscribed_events").array(),
