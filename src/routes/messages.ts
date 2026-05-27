@@ -10,6 +10,7 @@ import {
   normalizeEmail,
   normalizeEmailList,
   normalizeMessageId,
+  splitReferences,
 } from "../lib/email.js";
 import { createEmbedding, embeddingsEnabled } from "../lib/embeddings.js";
 import { finalizeList, parseLimit } from "../lib/pagination.js";
@@ -109,13 +110,31 @@ router.post("/", async (c) => {
   }
 
   let inReplyTo: string | null = null;
+  let references: string[] = [];
+  let replySubject = subject;
   if (!threadCreated) {
     const lastMessage = await db.query.messages.findFirst({
       where: and(eq(messages.threadId, threadId), eq(messages.accountId, c.get("accountId"))),
       orderBy: desc(messages.createdAt),
     });
     inReplyTo = lastMessage?.messageIdHeader ?? null;
+    if (lastMessage) {
+      const prevHeaders = (lastMessage.headers ?? {}) as Record<string, unknown>;
+      const prevRefsRaw = prevHeaders["References"] ?? prevHeaders["references"];
+      const prevRefs = typeof prevRefsRaw === "string" ? splitReferences(prevRefsRaw) : [];
+      references = [...prevRefs, lastMessage.messageIdHeader];
+    }
+    // Inherit thread subject when caller didn't supply one, and ensure "Re: "
+    // prefix so recipient clients (Gmail, Outlook) thread the message even when
+    // they don't recognize the In-Reply-To/References IDs.
+    const baseSubject = subject ?? thread?.subject ?? null;
+    replySubject = baseSubject && !/^re:\s*/i.test(baseSubject)
+      ? `Re: ${baseSubject}`
+      : baseSubject;
   }
+
+  const outboundHeaders: Record<string, unknown> = { ...headersResult.value };
+  if (references.length > 0) outboundHeaders["References"] = references.join(" ");
 
   const embedding = embeddingsEnabled() && text ? await createEmbedding(text) : null;
 
@@ -134,10 +153,10 @@ router.post("/", async (c) => {
       toAddresses,
       ccAddresses,
       bccAddresses,
-      subject,
+      subject: replySubject,
       bodyText: text,
       bodyHtml: html,
-      headers: headersResult.value,
+      headers: outboundHeaders,
       embedding: embedding ?? undefined,
     })
     .returning();
@@ -150,12 +169,12 @@ router.post("/", async (c) => {
       to: toAddresses,
       cc: ccAddresses,
       bcc: bccAddresses,
-      subject,
+      subject: replySubject,
       text,
       html,
       messageId: messageId,
       inReplyTo,
-      references: inReplyTo ? [inReplyTo] : [],
+      references,
       extraHeaders: headersResult.value,
     });
   } catch (err) {

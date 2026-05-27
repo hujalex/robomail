@@ -1,27 +1,59 @@
-Robomail - AgentMail Clone
+# Robomail
 
-Robomail serves to provide an API interface enabling agents and humans alike to deploy and manage email inboxes programmatically. Robomail manages the underlying infrastructure
+Programmatic email infrastructure for agents. Create inboxes, send messages, and manage threads via a simple HTTP API.
+
+## Quickstart
+
+```ts
+import { RoboMailClient } from "robomail-sdk";
+
+const client = new RoboMailClient({ token: process.env.ROBOMAIL_API_KEY });
+
+// Create an inbox
+const inbox = await client.inboxes.createInbox({
+  username: "agent",
+  domain: "example.org",
+});
+
+// Send a message
+const message = await client.messages.sendMessage({
+  inbox_email_address: "agent@example.org",
+  to: "user@gmail.com",
+  subject: "Hello from your agent",
+  text: "Hi! How can I help you today?",
+});
+
+// Reply in the same thread
+await client.messages.sendMessage({
+  inbox_email_address: "agent@example.org",
+  to: "user@gmail.com",
+  in_reply_to_thread_id: message.thread_id,
+  text: "Just following up!",
+});
+
+// List threads
+const { threads } = await client.threads.listThreads({
+  inbox_email_address: "agent@example.org",
+});
+```
+
+## Stack
+
+- **API** — Hono on Node.js
+- **Database** — NeonDB (Postgres) via Drizzle ORM
+- **Inbound email** — Resend webhook
+- **Outbound email** — Resend
+- **SDK** — Auto-generated via Fern from `openapi.yaml`
+
+## Database
+
+We leverage NeonDB to store information including registered accounts, their 
 
 
-Database
-We leverage NeonDB to store required information including accounts, inboxes, messages, and message threads
+## SDK releases
 
+```bash
+git tag vx.x.x && git push --tags
+```
 
-Mailing Service
-- Resend provides an inbound email service that makes a POST request to our API server whenever an email address receives a new message. Our API Server contains a webhook to process the POST request on-demand.
-- Resend furthermore provides an outbound email service that allows us to send emails to other email addresses
-
-Software Development Kit (SDK)
-
-Robomail's HTTP API server follows the OpenAPI standard enabling straightforward SDK generation in TypeScript through fern. The SDK provides an interface to programmatically interact with the robomail HTTP API server to manage agent inboxes.
-
-Update SDK flow
-1. Change to teh API server or OpenAPI specification
-2. Push code normally to the repository
-3. To release: git tag vx.x.x && git push --tags
-4. Riggers the workflow - Fern generates the SDK and publishes to npm 
-
-Sending Emails
-
-
-Receiving Emails
+Pushing a tag triggers CI to regenerate and publish the SDK to npm via Fern.
